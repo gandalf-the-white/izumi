@@ -1,0 +1,249 @@
+#+title: Let’s let them choose the encryption
+* Introduction
+However, I propose an architecture in which AI plays a genuine role in the negotiation process, but never has the final say on security. Agent Rig recommends a cryptographic suite from amongst those authorized; a deterministic CryptoPolicyEngine verifies the proposal, and the Rust cryptographic engine executes only known, pre-registered protocols.
+* General Architecture
+** Algorithm
+#+begin_src emacs-lisp
+                      Réseau
+       ┌────────────────────────────────-───────┐
+       │                                        │
+       │     secure communication channel       │
+       │        + data chanlel                  │
+       │                                        │
+       ▼                                        ▼
+┌───────────────┐                        ┌───────────────┐
+│    Proxy A    │                        │    Proxy B    │
+│               │                        │               │
+│ SOCKS5        │                        │ SOCKS5        │
+│       │       │                        │       │       │
+│       ▼       │                        │       ▼       │
+│ SessionMgr    │                        │ SessionMgr    │
+│       │       │                        │       │       │
+│       ▼       │                        │       ▼       │
+│ Agent IA      │◄──── négociation  ────►│ Agent IA      │
+│   Rig         │                        │   Rig         │
+│       │       │                        │       │       │
+│       ▼       │                        │       ▼       │
+│ Policy Engine │                        │ Policy Engine │
+│       │       │                        │       │       │
+│       ▼       │                        │       ▼       │
+│ CryptoRegistry│                        │ CryptoRegistry│
+│       │       │                        │       │       │
+│       ▼       │                        │       ▼       │
+│ CryptoEngine  │◄══ encryptedtunnel ═══►│ CryptoEngine  │
+└───────▲───────┘                        └───────▲───────┘
+        │                                        │
+        │ SOCKS                                  │
+        │                                        │
+┌───────┴───────┐                        ┌───────┴───────┐
+│ Application A │                        │ Application B │
+└───────────────┘                        └───────────────┘
+#+end_src
+* The Security of Negotiation
+** Authentication
+The negotiation must be authenticated.
+#+begin_src emacs-lisp
+BOOTSTRAP SECURITY
+        │
+        ▼
+Authentication of Both Proxies
+        │
+        ▼
+Exchange of Capabilities
+        │
+        ▼
+IA Negotiation
+        │
+        ▼
+Deterministic Validation
+        │
+        ▼
+Session Establishment
+        │
+        ▼
+DATA SECURITY
+#+end_src
+One initial idea would be to use the /Noise Protocol Framework/, which is particularly interesting. Noise provides handshakes built around modern primitives with authentication, forward secrecy, and multiple handshake patterns; there are Rust implementations available.
+* Why use AI?
+** Imagine
+We can present condition such as
+#+begin_src emacs-lisp
+Information             Example
+-----------------------------------------
+Capabilities            AES-GCM, ChaCha
+CPU                     AES-NI available
+Environment             Kubernetes / Edge
+Policy                  AES mandatory
+Performance             Latency priority
+Compliance              Authorised suites
+Security level          Standard / High
+System Load             High CPU
+Peer Characteristics    ARM/x86
+Application Constraints Low latency
+History                 Previous failures
+#+end_src
+With these information, AI recommend the most appropriate suite. AI is therefore becoming a negotiation adviser, not a cryptographic engine.
+We can imagine a server collecting information and send its to the agent, such as an /Oracle/ accompanied by a /RAG/.
+* Separate AI decision-making from security
+** Schema
+Just a recommendation. It's *probably* a bad idea to give the agent full authority. Let's not read any sarcasm into this remark.
+#+begin_src emacs-lisp
+                      ┌──────────────────┐
+Capabilities ────────►│                  │
+Policy ──────────────►│   Rig Agent      │
+Contexte ────────────►│                  │
+                      └────────┬─────────┘
+                               │
+                               │ Recommendation
+                               ▼
+                      ┌──────────────────┐
+                      │ Crypto Policy    │
+                      │ Engine           │
+                      │                  │
+                      │ DETERMINISTIC    │
+                      └────────┬─────────┘
+                               │
+                         SuiteId approved
+                               │
+                               ▼
+                      ┌──────────────────┐
+                      │ Crypto Registry  │
+                      └────────┬─────────┘
+                               │
+                               ▼
+                      ┌──────────────────┐
+                      │ Crypto Engine    │
+                      └──────────────────┘
+#+end_src
+* Path of Package
+** Overview
+When /Application A/ wants to communicate with /Application B/:
+#+begin_src emacs-lisp
+Application A
+      │
+      │ SOCKS CONNECT
+      ▼
+Proxy A
+      │
+      ├── Proxy B identification
+      │
+      ├── authentication
+      │
+      ├── capabilities exchange
+      │
+      ├── Agent A consultation
+      │
+      ├── recommendation exchange
+      │
+      ├── policy validation
+      │
+      ├── deterministic resolution
+      │
+      ├── cryptographic handshake
+      │
+      ▼
+===== SECURE SESSION =====
+      │
+      ▼
+Proxy B
+      │
+      ▼
+Application B
+#+end_src
+and finally
+#+begin_src emacs-lisp
+SessionState == Secure
+#+end_src
+** If the LLM fails
+#+begin_src emacs-lisp
+                   Agent available
+                  /
+Negotiation ─────
+                  \
+                   Agent unavailable
+                           │
+                           ▼
+                  deterministic fallback
+#+end_src
+Interesting to compare the methods.
+* Tree Structure
+** Target
+#+begin_src emacs-lisp
+ai-socks-proxy/
+│
+├── Cargo.toml
+│
+├── crates/
+│   │
+│   ├── domain/
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── crypto.rs
+│   │       ├── negotiation.rs
+│   │       ├── peer.rs
+│   │       └── session.rs
+│   │
+│   ├── protocol/
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── message.rs
+│   │       ├── codec.rs
+│   │       └── handshake.rs
+│   │
+│   ├── crypto/
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── registry.rs
+│   │       ├── policy.rs
+│   │       └── provider.rs
+│   │
+│   ├── agent/
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── advisor.rs
+│   │       ├── rig_advisor.rs
+│   │       └── prompt.rs
+│   │
+│   ├── socks/
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── server.rs
+│   │       └── connection.rs
+│   │
+│   └── proxy/
+│       └── src/
+│           ├── main.rs
+│           ├── config.rs
+│           ├── session_manager.rs
+│           └── peer.rs
+│
+└── tests/
+    ├── negotiation.rs
+    ├── proxy_to_proxy.rs
+    ├── socks.rs
+    └── secure_tunnel.rs
+#+end_src
+** Kubernetes
+#+begin_src emacs-lisp
+Pod A
+┌─────────────────────────┐
+│                         │
+│  Application A          │
+│       │                 │
+│       ▼                 │
+│  AI SOCKS Sidecar       │
+│                         │
+└───────────┬─────────────┘
+            │
+            │ secure tunnel
+            │
+┌───────────▼─────────────┐
+│                         │
+│  AI SOCKS Sidecar       │
+│       │                 │
+│       ▼                 │
+│  Application B          │
+│                         │
+└─────────────────────────┘
+Pod B
+#+end_src
