@@ -63,3 +63,59 @@ NegotiationContext   PeerCapabilities B
         ▼
 CryptoRecommendation
 #+end_src
+* Stage 2
+** Objective
+Now, we're going to associate it with metadata that can be used by the policy engine and, later, by the Rig agent.
+#+begin_src emacs-lisp
+CryptoSuiteId
+     │
+     ▼
+CryptoSuiteDescriptor
+     │
+     ├── family
+     │
+     ├── key_size_bits
+     │
+     ├── nonce_size_bits
+     │
+     ├── security_bits
+     │
+     ├── aead
+     │
+     └── priority
+#+end_src
+** Next step
+#+begin_src emacs-lisp
+Shared Suites
+      │
+      ▼
+┌──────────────────────┐
+│ ChaCha20Poly1305     │
+│ security = 128       │
+│ priority = 100       │
+│ AEAD = true          │
+└──────────────────────┘
+      │
+      ├────────────┐
+      │            │
+      ▼            ▼
+Policy Engine    AI Agent
+      │            │
+      └──────┬─────┘
+             ▼
+       Recommendation
+#+end_src
+** Security
+We keep a clear confident border
+#+begin_src emacs-lisp
+REMOTE PEER
+     │
+     │ CryptoSuiteId only
+     ▼
+LOCAL CATALOG
+     │
+     │ Trusted metadata
+     ▼
+Policy / Agent
+#+end_src
+A remote peer cannot, therefore, impose its own cryptographic properties on us.
