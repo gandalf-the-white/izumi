@@ -1,0 +1,10 @@
+[package]
+name = "identity"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+domain = { path = "../domain" }
+snow = "0.10.0"
+thiserror = "2.0.20"

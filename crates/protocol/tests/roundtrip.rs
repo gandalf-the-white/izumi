@@ -24,7 +24,7 @@ fn all_protocol_messages_roundtrip() {
 
         session_id: session_id.clone(),
 
-        peer_id: PeerId::new("proxy-a"),
+        claimed_peer_id: PeerId::new("proxy-a"),
     }));
 
     roundtrip(ProtocolMessage::Capabilities(Capabilities {

@@ -623,3 +623,186 @@ NegotiationCoordinator
        NegotiationResult
 #+end_src
 * Stage 9
+** Protocol
+Let's take about security.
+#+begin_src emacs-lisp
+Proxy A                                      Proxy B
+   │                                            │
+   │ TCP futur                                  │
+   ├───────────────────────────────────────────►│
+   │                                            │
+   │          Noise XX handshake                │
+   │                                            │
+   │──── ephemeral A ──────────────────────────►│
+   │                                            │
+   │◄── ephemeral B + static B ─────────────────│
+   │                                            │
+   │──── static A ─────────────────────────────►│
+   │                                            │
+   ▼                                            ▼
+remote static key B                     remote static key A
+   │                                            │
+   ▼                                            ▼
+TrustStore A                              TrustStore B
+   │                                            │
+   ▼                                            ▼
+expected key B == received ?             expected key A == received ?
+   │                                            │
+   └─────────────── YES ────────────────────────┘
+                          │
+                          ▼
+                MUTUALLY AUTHENTICATED
+#+end_src
+** Handshake XX
+#+begin_src emacs-lisp
+Initiator                           Responder
+
+   │                                   │
+   │──────── message 1 ───────────────►│
+   │                                   │
+   │◄─────── message 2 ────────────────│
+   │                                   │
+   │──────── message 3 ───────────────►│
+   │                                   │
+#+end_src
+with this concept:
+#+begin_src emacs-lisp
+message 1:
+    ephemeral A
+
+message 2:
+    ephemeral B
+    static B
+    authentication data
+
+message 3:
+    static A
+    authentication data
+#+end_src
+** Future Security Order
+#+begin_src emacs-lisp
+              TCP CONNECTION
+                    │
+                    ▼
+          untrusted ClientHello
+                    │
+                    ▼
+              Noise XX
+                    │
+                    ▼
+            remote static key
+                    │
+                    ▼
+              TrustStore
+                    │
+                    ▼
+          AuthenticatedPeer
+                    │
+=================================================
+          TRUST BOUNDARY CROSSED
+=================================================
+                    │
+                    ▼
+            Capabilities
+                    │
+                    ▼
+              AI Advisors
+                    │
+                    ▼
+          NegotiationResolver
+                    │
+                    ▼
+          CryptoPolicyEngine
+                    │
+                    ▼
+          negotiated cipher
+#+end_src
+** Check
+#+begin_src shell
+$ cargo fmt --all
+$ cargo check --workspace
+$ cargo test --workspace
+$ cargo clippy \
+    --workspace \
+    --all-targets \
+    --all-features
+#+end_src
+** Architecture
+#+begin_src emacs-lisp
+ai-socks-proxy/
+│
+├── Cargo.toml
+│
+└── crates/
+    ├── domain/
+    │
+    ├── crypto/
+    │
+    ├── protocol/
+    │
+    ├── negotiation/
+    │
+    ├── agent/
+    │
+    ├── orchestrator/
+    │
+    └── identity/
+        ├── Cargo.toml
+        ├── src/
+        │   ├── lib.rs
+        │   ├── authenticated_peer.rs
+        │   ├── keypair.rs
+        │   ├── noise.rs
+        │   └── trust.rs
+        └── tests/
+            └── mutual_authentication.rs
+#+end_src
+** Summary
+#+begin_src emacs-lisp
+                          DOMAIN
+                            │
+           ┌────────────────┼────────────────┐
+           │                │                │
+           ▼                ▼                ▼
+        CRYPTO          PROTOCOL         IDENTITY
+           │                │                │
+           │                │          Noise XX
+           │                │                │
+           │                │          TrustStore
+           │                │                │
+           │                │        AuthenticatedPeer
+           │                │                │
+           │                │                ▼
+           │                │          authenticated
+           │                │             session
+           │                │                │
+           ▼                ▼                ▼
+                       ORCHESTRATOR
+                            │
+                            ▼
+                         AGENT
+                            │
+                            ▼
+                      NEGOTIATION
+                            │
+                            ▼
+                    CryptoPolicyEngine
+                            │
+                            ▼
+                      CryptoRegistry
+#+end_src
+and finally
+#+begin_src emacs-lisp
+PeerId proxy-b
+    │
+    ▼
+expected static public key
+    │
+    ==
+received Noise static public key
+    │
+    ▼
+remote side proved possession
+of corresponding private key
+#+end_src
+* Stage 10

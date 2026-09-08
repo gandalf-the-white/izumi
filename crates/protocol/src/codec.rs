@@ -49,7 +49,7 @@ mod tests {
 
             session_id: SessionId::new("session-1"),
 
-            peer_id: PeerId::new("proxy-a"),
+            claimed_peer_id: PeerId::new("proxy-a"),
         });
 
         let codec = JsonCodec;

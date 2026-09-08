@@ -6,7 +6,11 @@ use serde::{Deserialize, Serialize};
 pub struct ClientHello {
     pub protocol_version: u16,
     pub session_id: SessionId,
-    pub peer_id: PeerId,
+
+    /// Identity claimed by the remote peer.
+    /// It MUST NOT be trusted until cryptographic
+    /// authentication succeeds.
+    pub claimed_peer_id: PeerId,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

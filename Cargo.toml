@@ -5,6 +5,7 @@ members = [
         "crates/agent",
         "crates/crypto",
         "crates/domain",
+        "crates/identity",
         "crates/negotiation",
         "crates/orchestrator",
         "crates/protocol",
