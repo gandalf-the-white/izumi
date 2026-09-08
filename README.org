@@ -187,3 +187,8 @@ $ cargo clippy \
     --all-targets \
     --all-features
 #+end_src
+** Summary
++ CryptoSuiteId    identifier of a suite
++ CryptoSuiteDescriptor    properties of this suite
++ CryptoProvider    available implementation
++ CryptoRegistry    list of available implementations
