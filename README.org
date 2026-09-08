@@ -495,3 +495,131 @@ Let's take a look at what /Ollama/ never receive.
                                       ├── actual nonce
                                       └── CryptoProvider
 #+end_src
+* Stage 8
+** Architecture
+#+begin_src emacs-lisp
+ai-socks-proxy/
+│
+├── Cargo.toml
+│
+└── crates/
+    │
+    ├── domain/
+    │
+    ├── crypto/
+    │
+    ├── protocol/
+    │
+    ├── negotiation/
+    │
+    ├── agent/
+    │
+    └── orchestrator/
+        ├── Cargo.toml
+        ├── src/
+        │   ├── lib.rs
+        │   ├── coordinator.rs
+        │   └── outcome.rs
+        │
+        └── tests/
+            └── negotiation.rs
+#+end_src
+** Check
+#+begin_src shell
+$ cargo fmt --all
+$ cargo check --workspace
+$ cargo test --workspace
+$ cargo clippy \
+    --workspace \
+    --all-targets \
+    --all-features
+#+end_src
+** Summary
+#+begin_src emacs-lisp
+                 Agent A
+                    │
+                    ▼
+              Recommendation
+                    │
+                    │
+Agent B             │
+   │                │
+   ▼                │
+Recommendation ─────┘
+       │
+       ▼
+NegotiationCoordinator
+       │
+       ├── AI error checking
+       │
+       ▼
+NegotiationResolver
+       │
+       ├── intersection
+       ├── determinism
+       │
+       ▼
+CryptoPolicyEngine
+       │
+       ├── security rules
+       │
+       ▼
+CryptoRegistry
+       │
+       ├── actual availability
+       │
+       ▼
+NegotiationResult
+#+end_src
+** Pipeline
+#+begin_src emacs-lisp
+                        Proxy A
+                           │
+                           ▼
+                    CryptoAdvisor A
+                           │
+                           │
+                           ├──────────────┐
+                           │              │
+                           ▼              │
+                  Recommendation A        │
+                                          │
+                                          ▼
+                                   NegotiationCoordinator
+                                          ▲
+                                          │
+                           ▼              │
+                  Recommendation B        │
+                           │              │
+                           ├──────────────┘
+                           │
+                           ▲
+                    CryptoAdvisor B
+                           ▲
+                           │
+                        Proxy B
+#+end_src
+and finally
+#+begin_src emacs-lisp
+NegotiationCoordinator
+          │
+          ├── agents OK
+          │      │
+          │      ▼
+          │   resolver(A,B)
+          │
+          └── agent failure
+                 │
+                 ▼
+       deterministic fallback
+                 │
+                 ▼
+        CryptoPolicyEngine
+                 │
+                 ▼
+          CryptoRegistry
+                 │
+                 ▼
+       NegotiationResult
+#+end_src
+* Stage 9

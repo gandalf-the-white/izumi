@@ -1,0 +1,16 @@
+[package]
+name = "orchestrator"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+agent = { path = "../agent" }
+crypto = { path = "../crypto" }
+domain = { path = "../domain" }
+negotiation = { path = "../negotiation" }
+
+thiserror = "2.0.20"
+
+[dev-dependencies]
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread"] }

@@ -40,3 +40,16 @@ impl CryptoAdvisor for MockCryptoAdvisor {
         ))
     }
 }
+
+#[derive(Debug, Clone, Default)]
+pub struct FailingCryptoAdvisor;
+
+#[async_trait]
+impl CryptoAdvisor for FailingCryptoAdvisor {
+    async fn recommend(
+        &self,
+        _context: &NegotiationContext,
+    ) -> Result<CryptoRecommendation, AdvisorError> {
+        Err(AdvisorError::Provider("simulated advisor failure".into()))
+    }
+}

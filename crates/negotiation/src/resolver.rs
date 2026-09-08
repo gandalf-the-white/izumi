@@ -114,4 +114,33 @@ impl<'a> NegotiationResolver<'a> {
             }
         }
     }
+
+    pub fn resolve_without_recommendations(
+        &self,
+        context: &NegotiationContext,
+    ) -> NegotiationResult {
+        let common = context.common_suites();
+
+        if common.is_empty() {
+            return NegotiationResult::Rejected {
+                reason: NegotiationFailure::NoCommonSuite,
+            };
+        }
+
+        let allowed = self.allowed_common_suites(&common);
+
+        if allowed.is_empty() {
+            return NegotiationResult::Rejected {
+                reason: NegotiationFailure::NoPolicyCompatibleSuite,
+            };
+        }
+
+        let selected =
+            Self::select_by_priority(&allowed).expect("allowed suites cannot be empty here");
+
+        NegotiationResult::Agreed {
+            suite: selected,
+            reason: AgreementReason::DeterministicFallback,
+        }
+    }
 }

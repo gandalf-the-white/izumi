@@ -2,6 +2,19 @@ use agent::{CryptoAdvisor, MockCryptoAdvisor};
 
 use domain::{CryptoSuiteId, NegotiationContext, PeerCapabilities, PeerId};
 
+fn context_with_both_suites() -> NegotiationContext {
+    NegotiationContext::new(
+        PeerCapabilities::new(
+            PeerId::new("proxy-a"),
+            vec![CryptoSuiteId::Aes256Gcm, CryptoSuiteId::ChaCha20Poly1305],
+        ),
+        PeerCapabilities::new(
+            PeerId::new("proxy-b"),
+            vec![CryptoSuiteId::Aes256Gcm, CryptoSuiteId::ChaCha20Poly1305],
+        ),
+    )
+}
+
 #[tokio::test]
 async fn mock_advisor_returns_configured_suite() {
     let context = NegotiationContext::new(
@@ -45,4 +58,15 @@ async fn mock_advisor_rejects_empty_intersection() {
     let result = advisor.recommend(&context).await;
 
     assert!(matches!(result, Err(agent::AdvisorError::NoCommonSuite)));
+}
+
+#[tokio::test]
+async fn failing_advisor_returns_provider_error() {
+    let context = context_with_both_suites();
+
+    let advisor = agent::FailingCryptoAdvisor;
+
+    let result = advisor.recommend(&context).await;
+
+    assert!(matches!(result, Err(agent::AdvisorError::Provider(_))));
 }

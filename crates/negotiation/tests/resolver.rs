@@ -181,3 +181,50 @@ fn resolver_is_symmetric() {
 
     assert_eq!(result_a, result_b);
 }
+
+#[test]
+fn deterministic_fallback_selects_highest_priority_suite() {
+    let context = context_with_both_suites();
+
+    let registry = CryptoRegistry::with_defaults();
+
+    let policy_engine = CryptoPolicyEngine::new(CryptoPolicy::default());
+
+    let resolver = NegotiationResolver::new(&policy_engine, &registry);
+
+    assert_eq!(
+        resolver.resolve_without_recommendations(&context),
+        NegotiationResult::Agreed {
+            suite: CryptoSuiteId::ChaCha20Poly1305,
+
+            reason: negotiation::AgreementReason::DeterministicFallback,
+        }
+    );
+}
+
+#[test]
+fn deterministic_fallback_respects_policy() {
+    let context = context_with_both_suites();
+
+    let registry = CryptoRegistry::with_defaults();
+
+    let policy = CryptoPolicy::new(
+        128,
+        true,
+        [CryptoSuiteId::Aes256Gcm, CryptoSuiteId::ChaCha20Poly1305],
+        [CryptoSuiteId::ChaCha20Poly1305],
+    );
+
+    let policy_engine = CryptoPolicyEngine::new(policy);
+
+    let resolver = NegotiationResolver::new(&policy_engine, &registry);
+
+    assert_eq!(
+        resolver.resolve_without_recommendations(&context),
+        NegotiationResult::Agreed {
+            suite: CryptoSuiteId::Aes256Gcm,
+
+            reason: negotiation::AgreementReason::DeterministicFallback,
+        }
+    );
+}

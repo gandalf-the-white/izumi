@@ -5,7 +5,7 @@ pub mod rig_advisor;
 
 pub use advisor::{AdvisorError, CryptoAdvisor};
 
-pub use mock::MockCryptoAdvisor;
+pub use mock::{FailingCryptoAdvisor, MockCryptoAdvisor};
 
 pub use prompt::{CRYPTO_ADVISOR_PREAMBLE, build_crypto_advisor_prompt};
 
