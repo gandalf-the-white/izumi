@@ -12,4 +12,4 @@ pub use negotiation::{CryptoRecommendation, NegotiationContext};
 
 pub use peer::{PeerCapabilities, PeerId};
 
-pub use session::SessionState;
+pub use session::{SessionId, SessionState};

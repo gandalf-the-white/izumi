@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum CryptoSuiteId {
+    #[serde(rename = "AES_256_GCM")]
     Aes256Gcm,
+
+    #[serde(rename = "CHACHA20_POLY1305")]
     ChaCha20Poly1305,
 }
 

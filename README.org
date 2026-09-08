@@ -169,3 +169,198 @@ $ cargo clippy \
 + CryptoSuiteDescriptor    properties of this suite
 + CryptoProvider    available implementation
 + CryptoRegistry    list of available implementations
+* Stage 4
+** Responsibility
+#+begin_src emacs-lisp
+                   NegotiationContext
+                         │
+                         ▼
+                  common_suites()
+                         │
+                         ▼
+                      Agent
+                         │
+                         ▼
+              CryptoRecommendation
+                         │
+                         ▼
+                NegotiationResolver
+                         │
+                  common suite?
+                         │
+                         ▼
+                CryptoPolicyEngine
+                         │
+                  Valid policy?
+                         │
+                         ▼
+                  CryptoRegistry
+                         │
+               Provider present?
+                         │
+                         ▼
+                  CryptoSuiteId
+#+end_src
+** Border
+#+begin_src emacs-lisp
+                  UNRELIABLE ZONE
+                       │
+                       │
+                ┌──────▼──────┐
+                │   AI Agent  │
+                └──────┬──────┘
+                       │
+                       │ recommendation
+                       ▼
+================================================
+            DETERMINISTIC BOUNDARY
+================================================
+                       │
+                       ▼
+             NegotiationResolver
+                       │
+                       ▼
+              CryptoPolicyEngine
+                       │
+                       ▼
+                CryptoRegistry
+                       │
+                       ▼
+                CryptoProvider
+================================================
+                  TRUSTED ZONE
+#+end_src
+We don't forget that a /LLM/ can :
++ suggest
++ explain
++ categorize
++ recommend
+and can't :
++ disable a policy
++ load an arbitrary cipher
++ access keys
++ execute cryptographic code
++ force a prohibited suite
+** Architecture
+#+begin_src emacs-lisp
+DOMAIN
+│
+├── CryptoSuiteId
+├── CryptoSuiteDescriptor
+├── PeerCapabilities
+├── NegotiationContext
+├── CryptoRecommendation
+└── SessionState
+
+
+CRYPTO
+│
+├── CryptoProvider
+│   ├── Aes256GcmProvider
+│   └── ChaCha20Poly1305Provider
+│
+├── CryptoRegistry
+│
+├── CryptoPolicy
+│
+└── CryptoPolicyEngine
+        │
+        ├── Accepted
+        │
+        └── Rejected
+              │
+              ├── SuiteDenied
+              ├── SuiteNotAllowed
+              ├── SecurityLevelTooLow
+              ├── AeadRequired
+              └── SuiteUnavailable
+#+end_src
+* Stage 5
+** Protocol Proxy-to-proxy
+#+begin_src emacs-lisp
+Proxy A                                  Proxy B
+   │                                        │
+   │ ClientHello                            │
+   ├───────────────────────────────────────►│
+   │                                        │
+   │                            ClientHello │
+   │◄───────────────────────────────────────┤
+   │                                        │
+   │ Capabilities                           │
+   ├───────────────────────────────────────►│
+   │                                        │
+   │                           Capabilities │
+   │◄───────────────────────────────────────┤
+   │                                        │
+   │                                        │
+   │       Local Intersection Calculation   │
+   │       + Future Call to Agent Rig       │
+   │                                        │
+   │ Recommendation                         │
+   ├───────────────────────────────────────►│
+   │                                        │
+   │                       Recommendation   │
+   │◄───────────────────────────────────────┤
+   │                                        │
+   │       NegotiationResolver              │
+   │       CryptoPolicyEngine               │
+   │                                        │
+   │ NegotiationAccept                      │
+   ├───────────────────────────────────────►│
+   │                                        │
+   │                     NegotiationAccept  │
+   │◄───────────────────────────────────────┤
+   │                                        │
+   │       identical selected_suite         │
+   │                                        │
+#+end_src
+** Architecture
+#+begin_src emacs-lisp
+ai-socks-proxy/
+│
+├── Cargo.toml
+│
+└── crates/
+    │
+    ├── domain/
+    │   ├── Cargo.toml
+    │   └── src/
+    │       ├── lib.rs
+    │       ├── crypto.rs
+    │       ├── negotiation.rs
+    │       ├── peer.rs
+    │       └── session.rs
+    │
+    ├── crypto/
+    │   ├── Cargo.toml
+    │   ├── src/
+    │   │   ├── lib.rs
+    │   │   ├── policy.rs
+    │   │   ├── provider.rs
+    │   │   └── registry.rs
+    │   └── tests/
+    │       ├── policy.rs
+    │       └── registry_capabilities.rs
+    │
+    └── protocol/
+        ├── Cargo.toml
+        ├── src/
+        │   ├── lib.rs
+        │   ├── codec.rs
+        │   ├── message.rs
+        │   ├── session.rs
+        │   └── version.rs
+        └── tests/
+            └── roundtrip.rs
+#+end_src
+** Check
+#+begin_src shell
+$ cargo fmt --all
+$ cargo check --workspace
+$ cargo test --workspace
+$ cargo clippy \
+    --workspace \
+    --all-targets \
+    --all-features
+#+end_src
+* Stage 6
