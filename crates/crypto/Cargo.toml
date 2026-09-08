@@ -1,0 +1,9 @@
+[package]
+name = "crypto"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+domain = { path = "../domain" }
+thiserror = "2.0.20"

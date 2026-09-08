@@ -84,7 +84,7 @@ CryptoSuiteDescriptor
      │
      └── priority
 #+end_src
-** Next step
+** Architecture
 #+begin_src emacs-lisp
 Shared Suites
       │
@@ -119,3 +119,71 @@ LOCAL CATALOG
 Policy / Agent
 #+end_src
 A remote peer cannot, therefore, impose its own cryptographic properties on us.
+* Stage 3
+** Complete Tree Structure
+#+begin_src emacs-lisp
+ai-socks-proxy/
+│
+├── Cargo.toml
+│
+└── crates/
+    │
+    ├── domain/
+    │   ├── Cargo.toml
+    │   └── src/
+    │       ├── lib.rs
+    │       ├── crypto.rs
+    │       ├── negotiation.rs
+    │       ├── peer.rs
+    │       └── session.rs
+    │
+    └── crypto/
+        ├── Cargo.toml
+        │
+        ├── src/
+        │   ├── lib.rs
+        │   ├── provider.rs
+        │   └── registry.rs
+        │
+        └── tests/
+            └── registry_capabilities.rs
+#+end_src
+** Architecture
+#+begin_src emacs-lisp
+                 DOMAIN
+                    │
+           CryptoSuiteId
+                    │
+                    ▼
+           descriptive suite
+                    │
+                    │
+                    ▼
+              CRYPTO CRATE
+                    │
+             CryptoProvider
+                    │
+            ┌───────┴───────┐
+            ▼               ▼
+       AES Provider      ChaCha Provider
+            │               │
+            └───────┬───────┘
+                    ▼
+              CryptoRegistry
+                    │
+                    ▼
+            available_suites()
+                    │
+                    ▼
+           PeerCapabilities
+#+end_src
+** Check
+#+begin_src shell
+$ cargo fmt --all
+$ cargo check --workspace
+$ cargo test --workspace
+$ cargo clippy \
+    --workspace \
+    --all-targets \
+    --all-features
+#+end_src
