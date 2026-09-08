@@ -92,13 +92,11 @@ impl CryptoPolicyEngine {
         &self.policy
     }
 
-    pub fn evaluate(
+    pub fn evaluate_suite(
         &self,
-        recommendation: &CryptoRecommendation,
+        suite: CryptoSuiteId,
         registry: &CryptoRegistry,
     ) -> PolicyDecision {
-        let suite = recommendation.suite();
-
         if self.policy.denied_suites.contains(&suite) {
             return PolicyDecision::Rejected {
                 violation: PolicyViolation::SuiteDenied(suite),
@@ -136,5 +134,13 @@ impl CryptoPolicyEngine {
         }
 
         PolicyDecision::Accepted { suite }
+    }
+
+    pub fn evaluate(
+        &self,
+        recommendation: &CryptoRecommendation,
+        registry: &CryptoRegistry,
+    ) -> PolicyDecision {
+        self.evaluate_suite(recommendation.suite(), registry)
     }
 }

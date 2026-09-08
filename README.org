@@ -364,3 +364,51 @@ $ cargo clippy \
     --all-features
 #+end_src
 * Stage 6
+** Architecture
+#+begin_src emacs-lisp
+                   DOMAIN
+                       │
+        ┌──────────────┼───────────────┐
+        │              │               │
+        ▼              ▼               ▼
+     CRYPTO         PROTOCOL      NEGOTIATION
+        │                              │
+CryptoRegistry                  NegotiationResolver
+        │                              │
+CryptoPolicyEngine                     │
+        ▲                              │
+        └──────────────────────────────┘
+#+end_src
+The complete stream is now:
+#+begin_src emacs-lisp
+Capabilities A
+        │
+        ├───────────────┐
+        │               │
+        ▼               ▼
+Capabilities B    CryptoRegistry
+        │               │
+        ▼               ▼
+ common_suites    disponibilité
+        │
+        ▼
+Recommendation A
+        │
+Recommendation B
+        │
+        ▼
+NegotiationResolver
+        │
+        ├── intersection
+        ├── policy
+        ├── disponibilité
+        ├── recommendations
+        └── tie-break déterministe
+                │
+                ▼
+       NegotiationResult
+          ┌─────┴─────┐
+          ▼           ▼
+       Agreed       Rejected
+#+end_src
+* Stage 7
