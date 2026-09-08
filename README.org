@@ -437,6 +437,32 @@ ai-socks-proxy/
             ├── mock_advisor.rs
             └── ollama_advisor.rs
 #+end_src
+And what about the flow
+#+begin_src emacs-lisp
+              ZONE IA
+                 │
+           Rig / Ollama
+                 │
+                 ▼
+       CryptoRecommendation
+                 │
+================================================
+       DETERMINISTIC BORDER
+================================================
+                 │
+                 ▼
+        NegotiationResolver
+                 │
+                 ▼
+        CryptoPolicyEngine
+                 │
+                 ▼
+          CryptoRegistry
+                 │
+================================================
+                 ▼
+       real crypto future
+#+end_src
 ** Check
 #+begin_src shell
 $ cargo fmt --all
