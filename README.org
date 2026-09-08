@@ -4,30 +4,7 @@
 ** Check
 #+begin_src shell
 $ cargo check --workspace
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
-#+end_src
-** Test
-#+begin_src shell
 $ cargo test --workspace
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
-     Running unittests src/lib.rs (target/debug/deps/domain-e1cc94cc5e30cc66)
-
-running 7 tests
-test crypto::tests::crypto_suite_ids_are_comparable ... ok
-test negotiation::tests::common_suites_returns_empty_when_no_suite_matches ... ok
-test negotiation::tests::common_suites_returns_shared_algorithms ... ok
-test peer::tests::peer_capabilities_reports_supported_suite ... ok
-test peer::tests::peer_capabilities_reports_unsupported_suite ... ok
-test peer::tests::peer_id_can_be_created ... ok
-test negotiation::tests::recommendation_exposes_selected_suite ... ok
-
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-
-   Doc-tests domain
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 #+end_src
 ** Compilation
 #+begin_src shell
