@@ -412,3 +412,60 @@ NegotiationResolver
        Agreed       Rejected
 #+end_src
 * Stage 7
+** Architecture
+#+begin_src emacs-lisp
+ai-socks-proxy/
+│
+├── Cargo.toml
+│
+└── crates/
+    ├── domain/
+    ├── crypto/
+    ├── protocol/
+    ├── negotiation/
+    │
+    └── agent/
+        ├── Cargo.toml
+        ├── src/
+        │   ├── lib.rs
+        │   ├── advisor.rs
+        │   ├── mock.rs
+        │   ├── prompt.rs
+        │   └── rig_advisor.rs
+        │
+        └── tests/
+            ├── mock_advisor.rs
+            └── ollama_advisor.rs
+#+end_src
+** Check
+#+begin_src shell
+$ cargo fmt --all
+$ cargo check --workspace
+$ cargo test --workspace
+$ cargo clippy \
+    --workspace \
+    --all-targets \
+    --all-features
+$ cargo test \
+    -p agent \
+    --test ollama_advisor \
+    -- --ignored
+#+end_src
+** Summary
+Let's take a look at what /Ollama/ never receive.
+#+begin_src emacs-lisp
+                        Ollama
+                          ▲
+                          │
+              ┌───────────┴───────────┐
+              │                       │
+            receives               does not receive
+              │                       │
+      suite metadata                  │
+      priority                        ├── keys
+      security level                  ├── plaintext
+      AEAD flag                       ├── user data
+      capabilities                    ├── secrets
+                                      ├── actual nonce
+                                      └── CryptoProvider
+#+end_src

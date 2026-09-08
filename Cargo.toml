@@ -1,8 +1,7 @@
 [workspace]
 resolver = "3"
 
-members = [
-        "crates/crypto", "crates/domain", "crates/negotiation", "crates/protocol",
+members = ["crates/agent", "crates/crypto", "crates/domain", "crates/negotiation", "crates/protocol",
 ]
 
 [workspace.package]
