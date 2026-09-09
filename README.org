@@ -1021,3 +1021,65 @@ into_transport_mode()                into_transport_mode()
                         ▼
                 ProtocolMessage
 #+end_src
+** Check
+#+begin_src shell
+$ cargo fmt --all
+$ cargo check --workspace
+$ cargo test --workspace
+$ cargo clippy \
+    --workspace \
+    --all-targets \
+    --all-features \
+    -- -D warnings
+$ cargo test \
+    -p transport \
+    --test tcp_noise_handshake \
+    -- --nocapture
+#+end_src
+** Stack
+#+begin_src emacs-lisp
+                 NETWORK
+                    │
+                    ▼
+              TcpStream
+                    │
+                    ▼
+                Framing
+                    │
+                    ▼
+                Noise XX
+                    │
+                    ▼
+               TrustStore
+                    │
+                    ▼
+         AuthenticatedConnection
+                    │
+                    ▼
+           Noise TransportState
+                    │
+                    ▼
+              JsonCodec
+                    │
+                    ▼
+           ProtocolMessage
+                    │
+                    ▼
+              Capabilities
+                    │
+                    ▼
+             CryptoAdvisor
+                    │
+                    ▼
+        CryptoRecommendation
+                    │
+                    ▼
+        NegotiationResolver
+                    │
+                    ▼
+        CryptoPolicyEngine
+                    │
+                    ▼
+           CryptoRegistry
+#+end_src
+* Stage 13

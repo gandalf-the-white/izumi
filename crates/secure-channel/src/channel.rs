@@ -1,8 +1,6 @@
 use snow::TransportState;
 
-use crate::{MAX_ENCRYPTED_FRAME_SIZE, MAX_PLAINTEXT_SIZE, SecureChannelError, encode_frame};
-
-use crate::decode_frame;
+use crate::{MAX_ENCRYPTED_FRAME_SIZE, MAX_PLAINTEXT_SIZE, SecureChannelError};
 
 use protocol::{JsonCodec, ProtocolCodec, ProtocolMessage};
 
@@ -19,6 +17,7 @@ impl SecureChannel {
         if plaintext.len() > MAX_PLAINTEXT_SIZE {
             return Err(SecureChannelError::PlaintextTooLarge {
                 actual: plaintext.len(),
+
                 maximum: MAX_PLAINTEXT_SIZE,
             });
         }
@@ -32,12 +31,10 @@ impl SecureChannel {
 
         ciphertext.truncate(written);
 
-        encode_frame(&ciphertext)
+        Ok(ciphertext)
     }
 
-    pub fn open(&mut self, frame: &[u8]) -> Result<Vec<u8>, SecureChannelError> {
-        let ciphertext = decode_frame(frame)?;
-
+    pub fn open(&mut self, ciphertext: &[u8]) -> Result<Vec<u8>, SecureChannelError> {
         let mut plaintext = vec![0_u8; MAX_PLAINTEXT_SIZE];
 
         let written = self

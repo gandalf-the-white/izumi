@@ -6770,6 +6770,7 @@ dependencies = [
  "identity",
  "protocol",
  "secure-channel",
+ "snow",
  "thiserror",
  "tokio",
 ]
