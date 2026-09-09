@@ -987,3 +987,37 @@ ai-socks-proxy/
         └── tests/
             └── tcp_secure_channel.rs
 #+end_src
+* Stage 12
+** Handshake Noise XX Directly Over TCP
+#+begin_src emacs-lisp
+Proxy A                                      Proxy B
+   │                                            │
+   │ TCP connect                                │
+   ├───────────────────────────────────────────►│
+   │                                            │
+   │      Noise XX message 1                    │
+   ├───────────────────────────────────────────►│
+   │                                            │
+   │      Noise XX message 2                    │
+   │◄───────────────────────────────────────────┤
+   │                                            │
+   │      Noise XX message 3                    │
+   ├───────────────────────────────────────────►│
+   │                                            │
+   ▼                                            ▼
+Remote static key B                    Remote static key A
+   │                                            │
+   ▼                                            ▼
+TrustStore A                              TrustStore B
+   │                                            │
+   ▼                                            ▼
+AuthenticatedPeer B                 AuthenticatedPeer A
+   │                                            │
+   ▼                                            ▼
+into_transport_mode()                into_transport_mode()
+   │                                            │
+   └──────── SAME TCP CONNECTION ───────────────┘
+                        │
+                        ▼
+                ProtocolMessage
+#+end_src
