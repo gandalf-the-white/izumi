@@ -1,0 +1,15 @@
+[package]
+name = "transport"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+protocol = { path = "../protocol" }
+secure-channel = { path = "../secure-channel" }
+thiserror = "2.0.20"
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "sync", "io-util", "net"] }
+
+[dev-dependencies]
+domain = { path = "../domain" }
+identity = { path = "../identity" }

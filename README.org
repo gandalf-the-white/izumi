@@ -914,3 +914,76 @@ Architecture is now reaching an important milestone
 #+end_src
 Agent-based negotiation can now be conducted over a cryptographically authenticated channel.
 * Stage 11
+** Architecture
+#+begin_src emacs-lisp
+Application logic
+       │
+       ▼
+ProtocolMessage
+       │
+       ▼
+JsonCodec
+       │
+       ▼
+SecureChannel
+       │
+       ▼
+Noise TransportState
+       │
+       ▼
+encrypted frame
+       │
+       ▼
+FramedIo
+       │
+       ▼
+Tokio TcpStream
+       │
+       ▼
+================ NETWORK ================
+       │
+       ▼
+Tokio TcpStream
+       │
+       ▼
+FramedIo
+       │
+       ▼
+SecureChannel
+       │
+       ▼
+Noise TransportState
+       │
+       ▼
+JsonCodec
+       │
+       ▼
+ProtocolMessage
+#+end_src
+** Tree Structure
+#+begin_src emacs-lisp
+ai-socks-proxy/
+│
+├── Cargo.toml
+│
+└── crates/
+    ├── domain/
+    ├── crypto/
+    ├── protocol/
+    ├── negotiation/
+    ├── agent/
+    ├── orchestrator/
+    ├── identity/
+    ├── secure-channel/
+    │
+    └── transport/
+        ├── Cargo.toml
+        ├── src/
+        │   ├── lib.rs
+        │   ├── connection.rs
+        │   ├── error.rs
+        │   └── framed_io.rs
+        │
+        └── tests/
+            └── tcp_secure_channel.rs
+#+end_src

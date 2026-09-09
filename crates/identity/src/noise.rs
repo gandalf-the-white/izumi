@@ -8,7 +8,7 @@ fn noise_error(error: snow::Error) -> IdentityError {
     IdentityError::Noise(error.to_string())
 }
 
-pub fn build_initiator<'a>(keypair: &'a PeerKeypair) -> Result<HandshakeState, IdentityError> {
+pub fn build_initiator(keypair: &PeerKeypair) -> Result<HandshakeState, IdentityError> {
     let params: NoiseParams = NOISE_PATTERN.parse().map_err(noise_error)?;
 
     Builder::new(params)
@@ -20,7 +20,7 @@ pub fn build_initiator<'a>(keypair: &'a PeerKeypair) -> Result<HandshakeState, I
         .map_err(noise_error)
 }
 
-pub fn build_responder<'a>(keypair: &'a PeerKeypair) -> Result<HandshakeState, IdentityError> {
+pub fn build_responder(keypair: &PeerKeypair) -> Result<HandshakeState, IdentityError> {
     let params: NoiseParams = NOISE_PATTERN.parse().map_err(noise_error)?;
 
     Builder::new(params)
