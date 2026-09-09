@@ -1,0 +1,12 @@
+[package]
+name = "secure-channel"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+domain = { path = "../domain" }
+identity = { path = "../identity" }
+protocol = { path = "../protocol" }
+snow = "0.10.0"
+thiserror = "2.0.20"

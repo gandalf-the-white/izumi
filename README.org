@@ -806,3 +806,111 @@ remote side proved possession
 of corresponding private key
 #+end_src
 * Stage 10
+** Pipeline
+#+begin_src emacs-lisp
+ProtocolMessage
+      │
+      ▼
+   JsonCodec
+      │
+      ▼
+JSON plaintext
+      │
+      ▼
+Noise TransportState
+      │
+      ▼
+encrypted Noise message
+      │
+      ▼
+┌────────────────────────────┐
+│ u32 length │ ciphertext    │
+└────────────────────────────┘
+      │
+      │ réseau futur
+      ▼
+┌────────────────────────────┐
+│ u32 length │ ciphertext    │
+└────────────────────────────┘
+      │
+      ▼
+Noise TransportState
+      │
+      ▼
+JSON plaintext
+      │
+      ▼
+   JsonCodec
+      │
+      ▼
+ProtocolMessage
+#+end_src
+** Architecture
+#+begin_src emacs-lisp
+ai-socks-proxy/
+│
+├── Cargo.toml
+│
+└── crates/
+    ├── domain/
+    ├── crypto/
+    ├── protocol/
+    ├── negotiation/
+    ├── agent/
+    ├── orchestrator/
+    ├── identity/
+    │   └── ...
+    │
+    └── secure-channel/
+        ├── Cargo.toml
+        ├── src/
+        │   ├── lib.rs
+        │   ├── channel.rs
+        │   ├── error.rs
+        │   ├── frame.rs
+        │   └── test_support.rs
+        │
+        └── tests/
+            └── secure_protocol.rs
+#+end_src
+Architecture is now reaching an important milestone
+#+begin_src emacs-lisp
+               Proxy A
+                  │
+            PeerKeypair A
+                  │
+                  ▼
+               Noise XX
+                  │
+           TrustStore A/B
+                  │
+                  ▼
+         AuthenticatedPeer
+                  │
+                  ▼
+           SecureChannel
+                  │
+                  │ encrypted
+                  ▼
+          ProtocolMessage
+                  │
+                  ▼
+          Capabilities
+                  │
+                  ▼
+            CryptoAdvisor
+                  │
+                  ▼
+        CryptoRecommendation
+                  │
+                  ▼
+       NegotiationResolver
+                  │
+                  ▼
+       CryptoPolicyEngine
+                  │
+                  ▼
+          CryptoRegistry
+#+end_src
+Agent-based negotiation can now be conducted over a cryptographically authenticated channel.
+* Stage 11

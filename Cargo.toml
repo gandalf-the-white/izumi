@@ -9,6 +9,7 @@ members = [
         "crates/negotiation",
         "crates/orchestrator",
         "crates/protocol",
+        "crates/secure-channel",
 ]
 
 [workspace.package]
