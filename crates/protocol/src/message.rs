@@ -59,4 +59,43 @@ pub enum ProtocolMessage {
     NegotiationAccept(NegotiationAccept),
 
     NegotiationReject(NegotiationReject),
+
+    AuthenticationAck(AuthenticationAck),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AuthenticationAck {
+    pub session_id: SessionId,
+}
+
+impl ProtocolMessage {
+    pub fn session_id(&self) -> &SessionId {
+        match self {
+            Self::ClientHello(message) => &message.session_id,
+
+            Self::AuthenticationAck(message) => &message.session_id,
+
+            Self::Capabilities(message) => &message.session_id,
+
+            Self::Recommendation(message) => &message.session_id,
+
+            Self::NegotiationAccept(message) => &message.session_id,
+
+            Self::NegotiationReject(message) => &message.session_id,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn protocol_message_exposes_session_id() {
+        let message = ProtocolMessage::AuthenticationAck(AuthenticationAck {
+            session_id: SessionId::new("session-42"),
+        });
+
+        assert_eq!(message.session_id().as_str(), "session-42");
+    }
 }

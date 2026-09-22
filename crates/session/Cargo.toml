@@ -1,0 +1,12 @@
+[package]
+name = "session"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+domain = { path = "../domain" }
+protocol = { path = "../protocol" }
+thiserror = "2.0.20"
+transport = { path = "../transport" }
+negotiation = { path = "../negotiation" }

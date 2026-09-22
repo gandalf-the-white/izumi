@@ -1083,3 +1083,55 @@ $ cargo test \
            CryptoRegistry
 #+end_src
 * Stage 13
+** The target state machine
+#+begin_src emacs-lisp
+Authenticated
+      │
+      │ AuthenticationAck
+      ▼
+PeerConfirmed
+      │
+      │ Capabilities
+      ▼
+CapabilitiesExchanged
+      │
+      │ Recommendation
+      ▼
+RecommendationsExchanged
+      │
+      │ NegotiationResolver
+      ▼
+Negotiated
+      │
+      │ confirmation
+      ▼
+ReadyForData
+      │
+      ▼
+Closed
+#+end_src
+** Currently
+#+begin_src emacs-lisp
+Crate           Responsibility
+transport       TCP + Noise + authenticated peer
+protocol        message representation
+session         order and protocol lifecycle
+orchestrator    agent invocation and coordination
+negotiation     deterministic decision
+#+end_src
+** Authentication Ack
+#+begin_src emacs-lisp
+A                                  B
+
+Noise complete                     Noise complete
+│                                  │
+│                                  ├── TrustStore A OK
+│                                  │
+│◄──── AuthenticationAck ──────────┤
+│
+├── B accepted me
+│
+├──── AuthenticationAck ──────────►│
+                                   │
+                                   ├── A accepted me
+#+end_src
