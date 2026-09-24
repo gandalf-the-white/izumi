@@ -88,7 +88,7 @@ Application A                         Application B
 │  ┌───────────────────────▼───────────────────────────┐  │
 │  │                  PeerSession                      │  │
 │  │                                                   │  │
-│  │ Authenticated                                    │  │
+│  │ Authenticated                                     │  │
 │  │      ↓                                            │  │
 │  │ PeerConfirmed                                     │  │
 │  │      ↓                                            │  │
@@ -104,33 +104,33 @@ Application A                         Application B
 │          ┌───────────────┴────────────────┐             │
 │          │                                │             │
 │          ▼                                ▼             │
-│  ┌───────────────┐               ┌─────────────────┐   │
-│  │ CONTROL PLANE │               │   DATA PLANE    │   │
-│  │               │               │                 │   │
-│  │ CryptoAdvisor │               │ CryptoRegistry  │   │
-│  │      │        │               │       │         │   │
-│  │      ▼        │               │       ▼         │   │
-│  │ Rig / LLM     │               │ CryptoProvider  │   │
-│  │      │        │               │       │         │   │
-│  │      ▼        │               │       ▼         │   │
-│  │ Recommendation│               │ DataCipher      │   │
-│  │      │        │               │                 │   │
-│  │      ▼        │               │ encrypt/decrypt │   │
-│  │ Resolver      │               └─────────────────┘   │
-│  │      │        │                                     │
-│  │      ▼        │                                     │
-│  │ PolicyEngine  │                                     │
-│  └───────────────┘                                     │
-│                                                        │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │          AuthenticatedConnection                 │  │
-│  │                                                  │  │
-│  │ AuthenticatedPeer                                │  │
-│  │ SecureChannel / Noise                            │  │
-│  │ FramedIo                                         │  │
-│  │ TcpStream                                        │  │
-│  └─────────────────────────┬────────────────────────┘  │
-└────────────────────────────┼───────────────────────────┘
+│  ┌───────────────┐               ┌─────────────────┐    │
+│  │ CONTROL PLANE │               │   DATA PLANE    │    │
+│  │               │               │                 │    │
+│  │ CryptoAdvisor │               │ CryptoRegistry  │    │
+│  │      │        │               │       │         │    │
+│  │      ▼        │               │       ▼         │    │
+│  │ Rig / LLM     │               │ CryptoProvider  │    │
+│  │      │        │               │       │         │    │
+│  │      ▼        │               │       ▼         │    │
+│  │ Recommendation│               │ DataCipher      │    │
+│  │      │        │               │                 │    │
+│  │      ▼        │               │ encrypt/decrypt │    │
+│  │ Resolver      │               └─────────────────┘    │
+│  │      │        │                                      │
+│  │      ▼        │                                      │
+│  │ PolicyEngine  │                                      │
+│  └───────────────┘                                      │
+│                                                         │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │          AuthenticatedConnection                 │   │
+│  │                                                  │   │
+│  │ AuthenticatedPeer                                │   │
+│  │ SecureChannel / Noise                            │   │
+│  │ FramedIo                                         │   │
+│  │ TcpStream                                        │   │
+│  └─────────────────────────┬────────────────────────┘   │
+└────────────────────────────┼─────────────────────────-──┘
                              │
                              ▼
                            NETWORK
