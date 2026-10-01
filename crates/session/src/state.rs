@@ -30,6 +30,8 @@ pub enum SessionPhase {
     /// suite.
     Negotiated,
 
+    DataKeysEstablished,
+
     /// The negotiated data-plane cipher has been
     /// initialized and application traffic may flow.
     ReadyForData,

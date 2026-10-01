@@ -1,4 +1,4 @@
-use agent::{MockCryptoAdvisor, advisor::CryptoAdvisor};
+use agent::{CryptoAdvisor, MockCryptoAdvisor};
 use domain::{CryptoSuiteId, NegotiationContext, PeerCapabilities, PeerId};
 
 fn context_with_both_suites() -> NegotiationContext {

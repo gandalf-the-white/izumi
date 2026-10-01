@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use domain::CryptoSuiteId;
 use thiserror::Error;
 
-use crate::{Aes256GcmProvider, ChaCha20Poly1305Provider, provider::CryptoProvider};
+use crate::{
+    Aes256GcmDataCipher, Aes256GcmProvider, ChaCha20Poly1305DataCipher, ChaCha20Poly1305Provider,
+    CryptoError, DataCipher, provider::CryptoProvider,
+};
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum CryptoRegistryError {
@@ -81,6 +84,18 @@ impl CryptoRegistry {
 
     pub fn is_empty(&self) -> bool {
         self.providers.is_empty()
+    }
+
+    pub fn create_data_cipher(
+        &self,
+        suite: CryptoSuiteId,
+        key: &[u8; 32],
+    ) -> Result<Box<dyn DataCipher>, CryptoError> {
+        match suite {
+            CryptoSuiteId::Aes256Gcm => Ok(Box::new(Aes256GcmDataCipher::new(key))),
+
+            CryptoSuiteId::ChaCha20Poly1305 => Ok(Box::new(ChaCha20Poly1305DataCipher::new(key))),
+        }
     }
 }
 

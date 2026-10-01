@@ -69,6 +69,14 @@ impl CryptoSuiteId {
             },
         }
     }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Aes256Gcm => "aes-256-gcm",
+
+            Self::ChaCha20Poly1305 => "chacha20-poly1305",
+        }
+    }
 }
 
 #[cfg(test)]

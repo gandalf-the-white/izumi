@@ -1,8 +1,9 @@
+use crypto::CryptoRegistry;
 use domain::{CryptoRecommendation, CryptoSuiteId, PeerCapabilities, PeerId, SessionId};
 
 use identity::{TrustStore, generate_keypair};
 
-use session::{PeerSession, SessionError, SessionPhase};
+use session::{PeerSession, SessionError, SessionPhase, SessionRole};
 
 use tokio::net::{TcpListener, TcpStream};
 
@@ -59,9 +60,19 @@ async fn create_session_pair(
 
     let session_id = SessionId::new(session_id);
 
-    let session_a = PeerSession::new(session_id.clone(), connection_a, capabilities_a);
+    let session_a = PeerSession::new(
+        session_id.clone(),
+        SessionRole::Initiator,
+        connection_a,
+        capabilities_a,
+    );
 
-    let session_b = PeerSession::new(session_id, connection_b, capabilities_b);
+    let session_b = PeerSession::new(
+        session_id,
+        SessionRole::Responder,
+        connection_b,
+        capabilities_b,
+    );
 
     (session_a, session_b)
 }
@@ -393,4 +404,327 @@ async fn closed_session_rejects_operations() {
     let result = session_a.send_authentication_ack().await;
 
     assert!(matches!(result, Err(SessionError::Closed)));
+}
+
+// =============================================================
+
+async fn negotiate_suite(
+    session_a: &mut PeerSession,
+    session_b: &mut PeerSession,
+    suite: CryptoSuiteId,
+) {
+    session_a
+        .send_negotiation_accept(suite)
+        .await
+        .expect("A should send negotiation acceptance");
+
+    session_b
+        .send_negotiation_accept(suite)
+        .await
+        .expect("B should send negotiation acceptance");
+
+    session_a
+        .receive_negotiation_accept()
+        .await
+        .expect("A should receive B negotiation acceptance");
+
+    session_b
+        .receive_negotiation_accept()
+        .await
+        .expect("B should receive A negotiation acceptance");
+
+    assert_eq!(session_a.phase(), SessionPhase::Negotiated);
+
+    assert_eq!(session_b.phase(), SessionPhase::Negotiated);
+
+    assert_eq!(session_a.selected_suite(), Some(suite));
+
+    assert_eq!(session_b.selected_suite(), Some(suite));
+}
+
+async fn create_negotiated_session_pair(
+    session_id: &str,
+    suite: CryptoSuiteId,
+) -> (PeerSession, PeerSession) {
+    let (mut session_a, mut session_b) = create_session_pair(
+        session_id,
+        vec![CryptoSuiteId::Aes256Gcm, CryptoSuiteId::ChaCha20Poly1305],
+        vec![CryptoSuiteId::Aes256Gcm, CryptoSuiteId::ChaCha20Poly1305],
+    )
+    .await;
+
+    confirm_peers(&mut session_a, &mut session_b).await;
+
+    exchange_capabilities(&mut session_a, &mut session_b).await;
+
+    exchange_recommendations(&mut session_a, &mut session_b, suite).await;
+
+    negotiate_suite(&mut session_a, &mut session_b, suite).await;
+
+    (session_a, session_b)
+}
+
+async fn exchange_data_keys(session_a: &mut PeerSession, session_b: &mut PeerSession) {
+    session_a
+        .send_data_key()
+        .await
+        .expect("A should send its data-plane public key");
+
+    session_b
+        .receive_data_key()
+        .await
+        .expect("B should receive A data-plane public key");
+
+    session_b
+        .send_data_key()
+        .await
+        .expect("B should send its data-plane public key");
+
+    session_a
+        .receive_data_key()
+        .await
+        .expect("A should receive B data-plane public key");
+
+    assert_eq!(session_a.phase(), SessionPhase::DataKeysEstablished);
+
+    assert_eq!(session_b.phase(), SessionPhase::DataKeysEstablished);
+}
+
+fn initialize_data_planes(session_a: &mut PeerSession, session_b: &mut PeerSession) {
+    let registry = CryptoRegistry::default();
+
+    session_a
+        .initialize_data_plane(&registry)
+        .expect("A data plane should initialize");
+
+    session_b
+        .initialize_data_plane(&registry)
+        .expect("B data plane should initialize");
+
+    assert_eq!(session_a.phase(), SessionPhase::ReadyForData);
+
+    assert_eq!(session_b.phase(), SessionPhase::ReadyForData);
+}
+
+// =============================================================
+
+#[tokio::test]
+async fn data_key_exchange_reaches_established() {
+    let (mut session_a, mut session_b) =
+        create_negotiated_session_pair("data-key-exchange", CryptoSuiteId::ChaCha20Poly1305).await;
+
+    assert_eq!(session_a.phase(), SessionPhase::Negotiated);
+
+    assert_eq!(session_b.phase(), SessionPhase::Negotiated);
+
+    exchange_data_keys(&mut session_a, &mut session_b).await;
+
+    assert_eq!(session_a.phase(), SessionPhase::DataKeysEstablished);
+
+    assert_eq!(session_b.phase(), SessionPhase::DataKeysEstablished);
+}
+
+#[tokio::test]
+async fn data_plane_reaches_ready() {
+    let (mut session_a, mut session_b) =
+        create_negotiated_session_pair("data-plane-ready", CryptoSuiteId::ChaCha20Poly1305).await;
+
+    exchange_data_keys(&mut session_a, &mut session_b).await;
+
+    initialize_data_planes(&mut session_a, &mut session_b);
+
+    assert_eq!(session_a.phase(), SessionPhase::ReadyForData);
+
+    assert_eq!(session_b.phase(), SessionPhase::ReadyForData);
+}
+
+#[tokio::test]
+async fn initiator_can_encrypt_for_responder() {
+    let (mut session_a, mut session_b) =
+        create_negotiated_session_pair("data-a-to-b", CryptoSuiteId::ChaCha20Poly1305).await;
+
+    exchange_data_keys(&mut session_a, &mut session_b).await;
+
+    initialize_data_planes(&mut session_a, &mut session_b);
+
+    let plaintext = b"Hello from application A";
+
+    let ciphertext = session_a
+        .encrypt_data(plaintext)
+        .expect("A should encrypt data");
+
+    assert_ne!(ciphertext, plaintext);
+
+    let decrypted = session_b
+        .decrypt_data(&ciphertext)
+        .expect("B should decrypt A data");
+
+    assert_eq!(decrypted, plaintext);
+}
+
+#[tokio::test]
+async fn responder_can_encrypt_for_initiator() {
+    let (mut session_a, mut session_b) =
+        create_negotiated_session_pair("data-b-to-a", CryptoSuiteId::ChaCha20Poly1305).await;
+
+    exchange_data_keys(&mut session_a, &mut session_b).await;
+
+    initialize_data_planes(&mut session_a, &mut session_b);
+
+    let plaintext = b"Hello from application B";
+
+    let ciphertext = session_b
+        .encrypt_data(plaintext)
+        .expect("B should encrypt data");
+
+    let decrypted = session_a
+        .decrypt_data(&ciphertext)
+        .expect("A should decrypt B data");
+
+    assert_eq!(decrypted, plaintext);
+}
+
+#[tokio::test]
+async fn aes256gcm_data_plane_works_end_to_end() {
+    let (mut session_a, mut session_b) =
+        create_negotiated_session_pair("data-aes", CryptoSuiteId::Aes256Gcm).await;
+
+    exchange_data_keys(&mut session_a, &mut session_b).await;
+
+    initialize_data_planes(&mut session_a, &mut session_b);
+
+    let message = b"AES-256-GCM application payload";
+
+    let ciphertext = session_a.encrypt_data(message).expect("AES encryption");
+
+    let plaintext = session_b.decrypt_data(&ciphertext).expect("AES decryption");
+
+    assert_eq!(plaintext, message);
+}
+
+#[tokio::test]
+async fn data_plane_is_bidirectional() {
+    let (mut session_a, mut session_b) =
+        create_negotiated_session_pair("bidirectional", CryptoSuiteId::ChaCha20Poly1305).await;
+
+    exchange_data_keys(&mut session_a, &mut session_b).await;
+
+    initialize_data_planes(&mut session_a, &mut session_b);
+
+    // A -> B
+
+    let ciphertext_a = session_a
+        .encrypt_data(b"request from A")
+        .expect("A encryption");
+
+    let plaintext_b = session_b.decrypt_data(&ciphertext_a).expect("B decryption");
+
+    assert_eq!(plaintext_b, b"request from A");
+
+    // B -> A
+
+    let ciphertext_b = session_b
+        .encrypt_data(b"response from B")
+        .expect("B encryption");
+
+    let plaintext_a = session_a.decrypt_data(&ciphertext_b).expect("A decryption");
+
+    assert_eq!(plaintext_a, b"response from B");
+}
+
+#[tokio::test]
+async fn multiple_data_records_work_in_both_directions() {
+    let (mut session_a, mut session_b) =
+        create_negotiated_session_pair("multiple-records", CryptoSuiteId::ChaCha20Poly1305).await;
+
+    exchange_data_keys(&mut session_a, &mut session_b).await;
+
+    initialize_data_planes(&mut session_a, &mut session_b);
+
+    for index in 0..100 {
+        // A -> B
+
+        let message_a = format!("A-message-{index}");
+
+        let ciphertext_a = session_a
+            .encrypt_data(message_a.as_bytes())
+            .expect("A encryption");
+
+        let plaintext_b = session_b.decrypt_data(&ciphertext_a).expect("B decryption");
+
+        assert_eq!(plaintext_b, message_a.as_bytes());
+
+        // B -> A
+
+        let message_b = format!("B-message-{index}");
+
+        let ciphertext_b = session_b
+            .encrypt_data(message_b.as_bytes())
+            .expect("B encryption");
+
+        let plaintext_a = session_a.decrypt_data(&ciphertext_b).expect("A decryption");
+
+        assert_eq!(plaintext_a, message_b.as_bytes());
+    }
+}
+
+#[tokio::test]
+async fn data_before_ready_is_rejected() {
+    let (mut session_a, _session_b) =
+        create_negotiated_session_pair("data-too-early", CryptoSuiteId::ChaCha20Poly1305).await;
+
+    assert_eq!(session_a.phase(), SessionPhase::Negotiated);
+
+    let result = session_a.encrypt_data(b"this must not be encrypted yet");
+
+    assert!(matches!(
+        result,
+        Err(SessionError::UnexpectedMessage {
+            phase: SessionPhase::Negotiated
+        })
+    ));
+}
+
+#[tokio::test]
+async fn ciphertext_cannot_be_decrypted_in_wrong_direction() {
+    let (mut session_a, mut session_b) =
+        create_negotiated_session_pair("direction-test", CryptoSuiteId::ChaCha20Poly1305).await;
+
+    exchange_data_keys(&mut session_a, &mut session_b).await;
+
+    initialize_data_planes(&mut session_a, &mut session_b);
+
+    let ciphertext = session_a
+        .encrypt_data(b"message from A")
+        .expect("A encryption");
+
+    let result = session_a.decrypt_data(&ciphertext);
+
+    assert!(
+        result.is_err(),
+        "A must not decrypt data encrypted with its own TX key"
+    );
+}
+
+#[tokio::test]
+async fn modified_data_ciphertext_is_rejected() {
+    let (mut session_a, mut session_b) =
+        create_negotiated_session_pair("tampered-data", CryptoSuiteId::ChaCha20Poly1305).await;
+
+    exchange_data_keys(&mut session_a, &mut session_b).await;
+
+    initialize_data_planes(&mut session_a, &mut session_b);
+
+    let mut ciphertext = session_a
+        .encrypt_data(b"important application data")
+        .expect("encryption");
+
+    ciphertext[0] ^= 0x01;
+
+    let result = session_b.decrypt_data(&ciphertext);
+
+    assert!(
+        result.is_err(),
+        "modified application data must be rejected"
+    );
 }

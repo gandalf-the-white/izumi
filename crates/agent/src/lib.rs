@@ -1,7 +1,7 @@
-pub mod advisor;
-pub mod mock;
-pub mod prompt;
-pub mod rig_advisor;
+mod advisor;
+mod mock;
+mod prompt;
+mod rig_advisor;
 
 pub use advisor::{AdvisorError, CryptoAdvisor};
 

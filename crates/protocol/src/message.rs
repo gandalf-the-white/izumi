@@ -46,6 +46,13 @@ pub struct NegotiationReject {
     pub reason: RejectionReason,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DataKeyExchange {
+    pub session_id: SessionId,
+
+    pub public_key: [u8; 32],
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "payload", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ProtocolMessage {
@@ -55,6 +62,7 @@ pub enum ProtocolMessage {
     NegotiationAccept(NegotiationAccept),
     NegotiationReject(NegotiationReject),
     AuthenticationAck(AuthenticationAck),
+    DataKeyExchange(DataKeyExchange),
 }
 
 impl ProtocolMessage {
@@ -71,6 +79,8 @@ impl ProtocolMessage {
             Self::NegotiationAccept(message) => &message.session_id,
 
             Self::NegotiationReject(message) => &message.session_id,
+
+            Self::DataKeyExchange(message) => &message.session_id,
         }
     }
 }

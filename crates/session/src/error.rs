@@ -63,4 +63,10 @@ pub enum SessionError {
 
     #[error("session is already closed")]
     Closed,
+
+    #[error("data-plane key material is unavailable")]
+    DataKeysUnavailable,
+
+    #[error("data-plane cryptographic initialization failed: {0}")]
+    DataCrypto(String),
 }

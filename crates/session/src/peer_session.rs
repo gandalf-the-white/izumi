@@ -1,14 +1,24 @@
+use crypto::{CryptoRegistry, DataCipher, EphemeralKeyExchange, derive_directional_keys};
 use domain::{
     CryptoRecommendation, CryptoSuiteId, NegotiationContext, PeerCapabilities, PeerId, SessionId,
 };
 
 use protocol::{
-    AuthenticationAck, Capabilities, NegotiationAccept, ProtocolMessage, Recommendation,
+    AuthenticationAck, Capabilities, DataKeyExchange, NegotiationAccept, ProtocolMessage,
+    Recommendation,
 };
 
 use transport::AuthenticatedConnection;
 
 use crate::{SessionError, SessionPhase};
+
+// use crate::{SessionError, SessionPhase};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionRole {
+    Initiator,
+    Responder,
+}
 
 pub struct PeerSession {
     session_id: SessionId,
@@ -29,11 +39,22 @@ pub struct PeerSession {
     remote_recommendation: Option<CryptoRecommendation>,
 
     selected_suite: Option<CryptoSuiteId>,
+
+    role: SessionRole,
+
+    key_exchange: Option<EphemeralKeyExchange>,
+
+    send_cipher: Option<Box<dyn DataCipher>>,
+
+    receive_cipher: Option<Box<dyn DataCipher>>,
+
+    remote_data_public_key: Option<[u8; 32]>,
 }
 
 impl PeerSession {
     pub fn new(
         session_id: SessionId,
+        role: SessionRole,
         connection: AuthenticatedConnection,
         local_capabilities: PeerCapabilities,
     ) -> Self {
@@ -56,6 +77,16 @@ impl PeerSession {
             remote_recommendation: None,
 
             selected_suite: None,
+
+            role,
+
+            key_exchange: None,
+
+            send_cipher: None,
+
+            receive_cipher: None,
+
+            remote_data_public_key: None,
         }
     }
 
@@ -466,6 +497,147 @@ impl PeerSession {
 
     pub fn close(&mut self) {
         self.phase = SessionPhase::Closed;
+    }
+
+    pub async fn send_data_key(&mut self) -> Result<(), SessionError> {
+        self.ensure_phase(SessionPhase::Negotiated)?;
+
+        if self.key_exchange.is_some() {
+            return Err(SessionError::UnexpectedMessage { phase: self.phase });
+        }
+
+        let exchange = EphemeralKeyExchange::generate();
+
+        let public_key = exchange.public_key();
+
+        let message = ProtocolMessage::DataKeyExchange(DataKeyExchange {
+            session_id: self.session_id.clone(),
+
+            public_key,
+        });
+
+        self.connection
+            .send(&message)
+            .await
+            .map_err(Self::transport_error)?;
+
+        self.key_exchange = Some(exchange);
+
+        self.refresh_data_key_phase();
+
+        Ok(())
+    }
+
+    pub async fn receive_data_key(&mut self) -> Result<(), SessionError> {
+        self.ensure_phase(SessionPhase::Negotiated)?;
+
+        if self.remote_data_public_key.is_some() {
+            return Err(SessionError::UnexpectedMessage { phase: self.phase });
+        }
+
+        let message = self
+            .connection
+            .receive()
+            .await
+            .map_err(Self::transport_error)?;
+
+        self.validate_session_id(&message)?;
+
+        match message {
+            ProtocolMessage::DataKeyExchange(exchange) => {
+                self.remote_data_public_key = Some(exchange.public_key);
+
+                self.refresh_data_key_phase();
+
+                Ok(())
+            }
+
+            _ => Err(SessionError::UnexpectedMessage { phase: self.phase }),
+        }
+    }
+
+    // fn refresh_data_key_phase(&mut self) {
+    //     if self.key_exchange.is_some() && self.remote_data_public_key.is_some() {
+    //         self.phase = SessionPhase::DataKeysEstablished;
+    //     }
+    // }
+
+    fn refresh_data_key_phase(&mut self) {
+        if self.phase == SessionPhase::Negotiated
+            && self.key_exchange.is_some()
+            && self.remote_data_public_key.is_some()
+        {
+            self.phase = SessionPhase::DataKeysEstablished;
+        }
+    }
+
+    pub fn initialize_data_plane(&mut self, registry: &CryptoRegistry) -> Result<(), SessionError> {
+        self.ensure_phase(SessionPhase::DataKeysEstablished)?;
+
+        let exchange = self
+            .key_exchange
+            .take()
+            .ok_or(SessionError::DataKeysUnavailable)?;
+
+        let remote_public = self
+            .remote_data_public_key
+            .take()
+            .ok_or(SessionError::DataKeysUnavailable)?;
+
+        let shared_secret = exchange.shared_secret(remote_public);
+
+        let suite = self
+            .selected_suite
+            .ok_or(SessionError::DataKeysUnavailable)?;
+
+        let keys = derive_directional_keys(&shared_secret, self.session_id.as_str(), suite.label())
+            .map_err(|error| SessionError::DataCrypto(error.to_string()))?;
+
+        let (send_key, receive_key) = match self.role {
+            SessionRole::Initiator => (keys.initiator_to_responder, keys.responder_to_initiator),
+
+            SessionRole::Responder => (keys.responder_to_initiator, keys.initiator_to_responder),
+        };
+
+        let send_cipher = registry
+            .create_data_cipher(suite, &send_key)
+            .map_err(|error| SessionError::DataCrypto(error.to_string()))?;
+
+        let receive_cipher = registry
+            .create_data_cipher(suite, &receive_key)
+            .map_err(|error| SessionError::DataCrypto(error.to_string()))?;
+
+        self.send_cipher = Some(send_cipher);
+
+        self.receive_cipher = Some(receive_cipher);
+
+        self.phase = SessionPhase::ReadyForData;
+
+        Ok(())
+    }
+
+    pub fn encrypt_data(&mut self, plaintext: &[u8]) -> Result<Vec<u8>, SessionError> {
+        self.ensure_phase(SessionPhase::ReadyForData)?;
+
+        let aad = self.session_id.as_str().as_bytes();
+
+        self.send_cipher
+            .as_mut()
+            .ok_or(SessionError::DataKeysUnavailable)?
+            .encrypt(plaintext, aad)
+            .map_err(|error| SessionError::DataCrypto(error.to_string()))
+    }
+
+    pub fn decrypt_data(&mut self, ciphertext: &[u8]) -> Result<Vec<u8>, SessionError> {
+        self.ensure_phase(SessionPhase::ReadyForData)?;
+
+        let aad = self.session_id.as_str().as_bytes();
+
+        self.receive_cipher
+            .as_mut()
+            .ok_or(SessionError::DataKeysUnavailable)?
+            .decrypt(ciphertext, aad)
+            .map_err(|error| SessionError::DataCrypto(error.to_string()))
     }
 }
 
