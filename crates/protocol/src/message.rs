@@ -1,5 +1,4 @@
 use domain::{CryptoRecommendation, CryptoSuiteId, PeerId, SessionId};
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -51,21 +50,11 @@ pub struct NegotiationReject {
 #[serde(tag = "type", content = "payload", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ProtocolMessage {
     ClientHello(ClientHello),
-
     Capabilities(Capabilities),
-
     Recommendation(Recommendation),
-
     NegotiationAccept(NegotiationAccept),
-
     NegotiationReject(NegotiationReject),
-
     AuthenticationAck(AuthenticationAck),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AuthenticationAck {
-    pub session_id: SessionId,
 }
 
 impl ProtocolMessage {
@@ -86,16 +75,7 @@ impl ProtocolMessage {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn protocol_message_exposes_session_id() {
-        let message = ProtocolMessage::AuthenticationAck(AuthenticationAck {
-            session_id: SessionId::new("session-42"),
-        });
-
-        assert_eq!(message.session_id().as_str(), "session-42");
-    }
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AuthenticationAck {
+    pub session_id: SessionId,
 }

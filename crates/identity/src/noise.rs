@@ -1,6 +1,6 @@
 use snow::{Builder, HandshakeState, params::NoiseParams};
 
-use crate::{IdentityError, NOISE_PATTERN, PeerKeypair, PeerPublicKey};
+use crate::{PeerKeypair, PeerPublicKey, error::IdentityError, keypair::NOISE_PATTERN};
 
 const NOISE_PROLOGUE: &[u8] = b"ai-socks-proxy/protocol-v1";
 
@@ -32,7 +32,6 @@ pub fn build_responder(keypair: &PeerKeypair) -> Result<HandshakeState, Identity
         .map_err(noise_error)
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CompletedNoiseHandshake {
     pub initiator_remote_key: PeerPublicKey,
 
@@ -45,7 +44,6 @@ pub struct CompletedNoiseHandshake {
 
 pub fn perform_handshake_in_memory(
     initiator_keypair: &PeerKeypair,
-
     responder_keypair: &PeerKeypair,
 ) -> Result<CompletedNoiseHandshake, IdentityError> {
     let mut initiator = build_initiator(initiator_keypair)?;
@@ -56,7 +54,6 @@ pub fn perform_handshake_in_memory(
 
     let mut payload = vec![0_u8; 65535];
 
-    // XX message 1
     let len = initiator
         .write_message(&[], &mut message)
         .map_err(noise_error)?;
@@ -65,7 +62,6 @@ pub fn perform_handshake_in_memory(
         .read_message(&message[..len], &mut payload)
         .map_err(noise_error)?;
 
-    // XX message 2
     let len = responder
         .write_message(&[], &mut message)
         .map_err(noise_error)?;
@@ -74,7 +70,6 @@ pub fn perform_handshake_in_memory(
         .read_message(&message[..len], &mut payload)
         .map_err(noise_error)?;
 
-    // XX message 3
     let len = initiator
         .write_message(&[], &mut message)
         .map_err(noise_error)?;

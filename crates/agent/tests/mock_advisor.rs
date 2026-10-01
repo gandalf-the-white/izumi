@@ -1,5 +1,4 @@
-use agent::{CryptoAdvisor, MockCryptoAdvisor};
-
+use agent::{MockCryptoAdvisor, advisor::CryptoAdvisor};
 use domain::{CryptoSuiteId, NegotiationContext, PeerCapabilities, PeerId};
 
 fn context_with_both_suites() -> NegotiationContext {
@@ -34,7 +33,7 @@ async fn mock_advisor_returns_configured_suite() {
     let recommendation = advisor
         .recommend(&context)
         .await
-        .expect("recommendation should succeed");
+        .expect("Recommendation should succed");
 
     assert_eq!(recommendation.suite(), CryptoSuiteId::ChaCha20Poly1305);
 

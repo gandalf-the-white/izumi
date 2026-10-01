@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    crypto::{CryptoSuiteDescriptor, CryptoSuiteId},
-    peer::PeerCapabilities,
-};
+use crate::{CryptoSuiteDescriptor, crypto::CryptoSuiteId, peer::PeerCapabilities};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NegotiationContext {
@@ -33,7 +30,7 @@ impl NegotiationContext {
             .collect()
     }
 
-    pub fn common_suite_descriptors(&self) -> Vec<CryptoSuiteDescriptor> {
+    pub fn common_suite_descriptor(&self) -> Vec<CryptoSuiteDescriptor> {
         self.common_suites()
             .into_iter()
             .map(CryptoSuiteId::descriptor)
@@ -72,8 +69,9 @@ impl CryptoRecommendation {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::peer::PeerId;
+
+    use super::*;
 
     #[test]
     fn common_suites_returns_shared_algorithms() {
@@ -138,14 +136,12 @@ mod tests {
 
         let context = NegotiationContext::new(local, remote);
 
-        let descriptors = context.common_suite_descriptors();
+        let descriptor = context.common_suite_descriptor();
 
-        assert_eq!(descriptors.len(), 1);
+        assert_eq!(descriptor[0].id, CryptoSuiteId::ChaCha20Poly1305);
 
-        assert_eq!(descriptors[0].id, CryptoSuiteId::ChaCha20Poly1305);
+        assert_eq!(descriptor[0].key_size_bits, 256);
 
-        assert_eq!(descriptors[0].key_size_bits, 256);
-
-        assert_eq!(descriptors[0].nonce_size_bits, 96);
+        assert_eq!(descriptor[0].nonce_size_bits, 96);
     }
 }

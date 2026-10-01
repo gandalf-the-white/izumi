@@ -1,22 +1,22 @@
 use domain::{CryptoRecommendation, CryptoSuiteId, PeerId, SessionId};
 
 use protocol::{
-    Capabilities, ClientHello, JsonCodec, NegotiationAccept, NegotiationReject, PROTOCOL_VERSION,
-    ProtocolCodec, ProtocolMessage, Recommendation, RejectionReason,
+    AuthenticationAck, Capabilities, ClientHello, JsonCodec, NegotiationAccept, NegotiationReject,
+    PROTOCOL_VERSION, ProtocolCodec, ProtocolMessage, Recommendation, RejectionReason,
 };
 
 fn roundtrip(message: ProtocolMessage) {
     let codec = JsonCodec;
 
-    let encoded = codec.encode(&message).expect("message should encode");
+    let encoded = codec.encode(&message).expect("Message should encode");
 
-    let decoded = codec.decode(&encoded).expect("message should decode");
+    let decode = codec.decode(&encoded).expect("Message should decode");
 
-    assert_eq!(decoded, message);
+    assert_eq!(decode, message);
 }
 
 #[test]
-fn all_protocol_messages_roundtrip() {
+fn all_protocol_message_roundtrip() {
     let session_id = SessionId::new("session-123");
 
     roundtrip(ProtocolMessage::ClientHello(ClientHello {
@@ -50,8 +50,17 @@ fn all_protocol_messages_roundtrip() {
     }));
 
     roundtrip(ProtocolMessage::NegotiationReject(NegotiationReject {
-        session_id,
+        session_id: session_id.clone(),
 
         reason: RejectionReason::NoCommonCryptoSuite,
     }));
+}
+
+#[test]
+fn protocol_message_exposes_session_id() {
+    let message = ProtocolMessage::AuthenticationAck(AuthenticationAck {
+        session_id: SessionId::new("session-42"),
+    });
+
+    assert_eq!(message.session_id().as_str(), "session-42");
 }

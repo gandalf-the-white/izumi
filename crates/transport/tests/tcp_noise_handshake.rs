@@ -1,7 +1,8 @@
-use domain::PeerId;
+use domain::{CryptoSuiteId, PeerId, SessionId};
 
 use identity::{TrustStore, generate_keypair};
 
+use protocol::{Capabilities, ProtocolMessage};
 use tokio::net::{TcpListener, TcpStream};
 
 use transport::{perform_initiator_handshake, perform_responder_handshake};
@@ -29,30 +30,39 @@ async fn noise_xx_is_performed_over_real_tcp() {
     let address = listener.local_addr().unwrap();
 
     let server = tokio::spawn(async move {
-        let (stream, _remote_address) = listener.accept().await.unwrap();
+        let (stream, _) = listener.accept().await.unwrap();
 
-        perform_responder_handshake(stream, &proxy_b, proxy_a_id, &trust_b)
+        let mut connection = perform_responder_handshake(stream, &proxy_b, proxy_a_id, &trust_b)
             .await
-            .expect(
-                "responder authentication \
-                 should succeed",
-            )
+            .expect("responder authentication");
+
+        assert_eq!(connection.peer().peer_id().as_str(), "proxy-a");
+
+        connection.receive().await.expect("secure message")
     });
 
     let stream = TcpStream::connect(address).await.unwrap();
 
-    let client = perform_initiator_handshake(stream, &proxy_a, proxy_b_id, &trust_a)
+    let mut connection = perform_initiator_handshake(stream, &proxy_a, proxy_b_id, &trust_a)
         .await
-        .expect(
-            "initiator authentication \
-         should succeed",
-        );
+        .expect("initiator authentication");
 
-    let server = server.await.unwrap();
+    assert_eq!(connection.peer().peer_id().as_str(), "proxy-b");
 
-    assert_eq!(client.peer().peer_id().as_str(), "proxy-b");
+    let message = ProtocolMessage::Capabilities(Capabilities {
+        session_id: SessionId::new("session-123"),
 
-    assert_eq!(server.peer().peer_id().as_str(), "proxy-a");
+        supported_suites: vec![CryptoSuiteId::Aes256Gcm, CryptoSuiteId::ChaCha20Poly1305],
+    });
+
+    connection
+        .send(&message)
+        .await
+        .expect("message should send");
+
+    let received = server.await.unwrap();
+
+    assert_eq!(received, message);
 }
 
 #[tokio::test]

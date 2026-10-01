@@ -1,6 +1,6 @@
-use crate::ProtocolMessage;
-
 use thiserror::Error;
+
+use crate::message::ProtocolMessage;
 
 pub trait ProtocolCodec {
     type Error;
@@ -36,11 +36,14 @@ impl ProtocolCodec for JsonCodec {
 
 #[cfg(test)]
 mod tests {
+    use domain::{CryptoSuiteId, PeerId, SessionId};
+
+    use crate::{
+        message::{Capabilities, ClientHello},
+        version::PROTOCOL_VERSION,
+    };
+
     use super::*;
-
-    use crate::{ClientHello, PROTOCOL_VERSION, ProtocolMessage};
-
-    use domain::{PeerId, SessionId};
 
     #[test]
     fn client_hello_roundtrip() {
@@ -54,24 +57,20 @@ mod tests {
 
         let codec = JsonCodec;
 
-        let encoded = codec.encode(&message).expect("message should encode");
+        let encoded = codec.encode(&message).expect("Message should encode");
 
-        let decoded = codec.decode(&encoded).expect("message should decode");
+        let decoded = codec.decode(&encoded).expect("Message should decode");
 
         assert_eq!(decoded, message);
     }
 
     #[test]
     fn capabilities_roundtrip() {
-        let message = ProtocolMessage::Capabilities(crate::Capabilities {
+        let message = ProtocolMessage::Capabilities(Capabilities {
             session_id: SessionId::new("session-1"),
 
-            supported_suites: vec![
-                domain::CryptoSuiteId::Aes256Gcm,
-                domain::CryptoSuiteId::ChaCha20Poly1305,
-            ],
+            supported_suites: vec![CryptoSuiteId::Aes256Gcm, CryptoSuiteId::ChaCha20Poly1305],
         });
-
         let codec = JsonCodec;
 
         let encoded = codec.encode(&message).unwrap();
@@ -83,10 +82,10 @@ mod tests {
 
     #[test]
     fn crypto_suite_uses_stable_wire_name() {
-        let message = ProtocolMessage::Capabilities(crate::Capabilities {
+        let message = ProtocolMessage::Capabilities(Capabilities {
             session_id: SessionId::new("session-1"),
 
-            supported_suites: vec![domain::CryptoSuiteId::Aes256Gcm],
+            supported_suites: vec![CryptoSuiteId::Aes256Gcm],
         });
 
         let codec = JsonCodec;
@@ -112,11 +111,11 @@ mod tests {
         let codec = JsonCodec;
 
         let data = br#"
-    {
-        "type": "DESTROY_THE_WORLD",
-        "payload": {}
-    }
-    "#;
+        {
+            "type": "DESTROY_THE_WORLD",
+            "payload": {}
+        }
+        "#;
 
         let result = codec.decode(data);
 

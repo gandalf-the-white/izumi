@@ -5,12 +5,13 @@ version.workspace = true
 license.workspace = true
 
 [dependencies]
-async-trait = "0.1.92"
 domain = { path = "../domain" }
+
+async-trait = "0.1.92"
 rig = "0.42.0"
 schemars = "1.2.2"
 serde = { version = "1.0.229", features = ["derive"] }
-thiserror = "2.0.20"
+thiserror = "2.0.21"
 
 [dev-dependencies]
 tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread"] }

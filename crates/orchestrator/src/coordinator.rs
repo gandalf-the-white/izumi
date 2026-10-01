@@ -1,14 +1,9 @@
-use agent::CryptoAdvisor;
-
+use agent::{AdvisorError, CryptoAdvisor};
 use crypto::{CryptoPolicyEngine, CryptoRegistry};
-
+use domain::NegotiationContext;
 use negotiation::NegotiationResolver;
 
-use domain::NegotiationContext;
-
-use agent::AdvisorError;
-
-use crate::{AdvisorOutcome, NegotiationOutcome};
+use crate::outcome::{AdvisorOutcome, NegotiationOutcome};
 
 pub struct NegotiationCoordinator<'a, L, R>
 where

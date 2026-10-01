@@ -4,10 +4,10 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum AdvisorError {
-    #[error("no common crypto suite is available")]
+    #[error("No common crypto suite is available")]
     NoCommonSuite,
 
-    #[error("agent returned an invalid recommendation: {0}")]
+    #[error("Agent return an invalid recommendation: {0}")]
     InvalidRecommendation(String),
 
     #[error("AI provider error: {0}")]

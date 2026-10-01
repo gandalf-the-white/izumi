@@ -3,7 +3,7 @@ mod error;
 mod framed_io;
 mod handshake;
 
-pub use connection::AuthenticatedConnection;
+pub use connection::{AuthenticatedConnection, PeerConnection};
 
 pub use error::TransportError;
 

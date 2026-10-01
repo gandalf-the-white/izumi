@@ -8,7 +8,6 @@ pub trait CryptoProvider: Send + Sync {
     }
 }
 
-#[derive(Debug, Default)]
 pub struct Aes256GcmProvider;
 
 impl CryptoProvider for Aes256GcmProvider {
@@ -17,7 +16,6 @@ impl CryptoProvider for Aes256GcmProvider {
     }
 }
 
-#[derive(Debug, Default)]
 pub struct ChaCha20Poly1305Provider;
 
 impl CryptoProvider for ChaCha20Poly1305Provider {

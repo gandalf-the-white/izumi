@@ -1,6 +1,4 @@
-use crypto::{CryptoPolicy, CryptoPolicyEngine, CryptoRegistry, PolicyDecision};
-
-use crypto::PolicyViolation;
+use crypto::{CryptoPolicy, CryptoPolicyEngine, CryptoRegistry, PolicyDecision, PolicyViolation};
 
 use domain::{CryptoRecommendation, CryptoSuiteId};
 

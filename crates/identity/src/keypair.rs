@@ -1,6 +1,6 @@
 use snow::{Builder, params::NoiseParams};
 
-use crate::IdentityError;
+use crate::error::IdentityError;
 
 pub const NOISE_PATTERN: &str = "Noise_XX_25519_ChaChaPoly_BLAKE2s";
 
@@ -26,7 +26,9 @@ impl PeerPrivateKey {
 }
 
 pub struct PeerKeypair {
+    #[allow(dead_code)]
     private: PeerPrivateKey,
+
     public: PeerPublicKey,
 }
 
@@ -35,6 +37,7 @@ impl PeerKeypair {
         &self.public
     }
 
+    #[allow(dead_code)]
     pub(crate) fn private_key(&self) -> &PeerPrivateKey {
         &self.private
     }

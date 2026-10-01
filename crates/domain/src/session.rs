@@ -35,6 +35,6 @@ mod tests {
     fn session_id_can_be_created() {
         let session_id = SessionId::new("session-123");
 
-        assert_eq!(session_id.as_str(), "session-123");
+        assert_eq!(session_id.as_str(), "session-123")
     }
 }

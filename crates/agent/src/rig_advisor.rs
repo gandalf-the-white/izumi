@@ -1,13 +1,14 @@
 use async_trait::async_trait;
-
 use domain::{CryptoRecommendation, CryptoSuiteId, NegotiationContext};
-
 use rig::{Agent, client::Nothing, prelude::*, providers::ollama};
-
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::{AdvisorError, CRYPTO_ADVISOR_PREAMBLE, CryptoAdvisor, build_crypto_advisor_prompt};
+use crate::{
+    AdvisorError,
+    advisor::CryptoAdvisor,
+    prompt::{CRYPTO_ADVISOR_PREAMBLE, build_crypto_advisor_prompt},
+};
 
 const MODEL: &str = "qwen3.8";
 
@@ -30,9 +31,9 @@ enum AgentCryptoSuite {
 impl From<AgentCryptoSuite> for CryptoSuiteId {
     fn from(value: AgentCryptoSuite) -> Self {
         match value {
-            AgentCryptoSuite::Aes256Gcm => Self::Aes256Gcm,
+            AgentCryptoSuite::Aes256Gcm => CryptoSuiteId::Aes256Gcm,
 
-            AgentCryptoSuite::ChaCha20Poly1305 => Self::ChaCha20Poly1305,
+            AgentCryptoSuite::ChaCha20Poly1305 => CryptoSuiteId::ChaCha20Poly1305,
         }
     }
 }
@@ -42,8 +43,7 @@ fn validate_output(
 ) -> Result<CryptoRecommendation, AdvisorError> {
     if !(0.0..=1.0).contains(&output.confidence) {
         return Err(AdvisorError::InvalidRecommendation(format!(
-            "confidence {} is outside \
-                         [0.0, 1.0]",
+            "Confidence {} is outside [0.0, 1.0]",
             output.confidence
         )));
     }
@@ -73,25 +73,6 @@ impl RigCryptoAdvisor {
         Ok(Self { agent })
     }
 }
-
-// #[async_trait]
-// impl CryptoAdvisor for RigCryptoAdvisor {
-//     async fn recommend(
-//         &self,
-//         context: &NegotiationContext,
-//     ) -> Result<CryptoRecommendation, AdvisorError> {
-//         let prompt = build_crypto_advisor_prompt(context)?;
-
-//         let output = self
-//             .agent
-//             .prompt_typed::<AgentRecommendationOutput>(prompt)
-//             .max_turns(1)
-//             .await
-//             .map_err(|error| AdvisorError::Provider(error.to_string()))?;
-
-//         validate_output(output)
-//     }
-// }
 
 #[async_trait]
 impl CryptoAdvisor for RigCryptoAdvisor {
@@ -130,13 +111,11 @@ mod tests {
     fn valid_output_is_converted() {
         let output = AgentRecommendationOutput {
             suite: AgentCryptoSuite::ChaCha20Poly1305,
-
-            reason: "preferred".into(),
-
+            reason: "prefered".into(),
             confidence: 0.9,
         };
 
-        let recommendation = validate_output(output).expect("output should be valid");
+        let recommendation = validate_output(output).expect("Output should be valid");
 
         assert_eq!(recommendation.suite(), CryptoSuiteId::ChaCha20Poly1305);
 
@@ -147,9 +126,7 @@ mod tests {
     fn invalid_confidence_is_rejected() {
         let output = AgentRecommendationOutput {
             suite: AgentCryptoSuite::Aes256Gcm,
-
-            reason: "test".into(),
-
+            reason: "Test".into(),
             confidence: 2.0,
         };
 

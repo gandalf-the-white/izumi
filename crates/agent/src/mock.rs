@@ -1,8 +1,7 @@
 use async_trait::async_trait;
-
 use domain::{CryptoRecommendation, CryptoSuiteId, NegotiationContext};
 
-use crate::{AdvisorError, CryptoAdvisor};
+use crate::advisor::{AdvisorError, CryptoAdvisor};
 
 #[derive(Debug, Clone)]
 pub struct MockCryptoAdvisor {

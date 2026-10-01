@@ -10,7 +10,7 @@ crypto = { path = "../crypto" }
 domain = { path = "../domain" }
 negotiation = { path = "../negotiation" }
 
-thiserror = "2.0.20"
+thiserror = "2.0.21"
 
 [dev-dependencies]
 tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread"] }

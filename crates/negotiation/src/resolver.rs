@@ -1,8 +1,10 @@
 use crypto::{CryptoPolicyEngine, CryptoRegistry, PolicyDecision};
-
 use domain::{CryptoRecommendation, CryptoSuiteId, NegotiationContext};
 
-use crate::{AgreementReason, NegotiationFailure, NegotiationResult};
+use crate::result::{
+    AgreementReason::{self},
+    NegotiationFailure, NegotiationResult,
+};
 
 pub struct NegotiationResolver<'a> {
     policy_engine: &'a CryptoPolicyEngine,
@@ -16,6 +18,10 @@ impl<'a> NegotiationResolver<'a> {
             registry,
         }
     }
+
+    // fn is_common(common: &[CryptoSuiteId], suite: CryptoSuiteId) -> bool {
+    //     common.contains(&suite)
+    // }
 
     fn allowed_common_suites(&self, common: &[CryptoSuiteId]) -> Vec<CryptoSuiteId> {
         common
@@ -40,9 +46,7 @@ impl<'a> NegotiationResolver<'a> {
     pub fn resolve(
         &self,
         context: &NegotiationContext,
-
         local_recommendation: &CryptoRecommendation,
-
         remote_recommendation: &CryptoRecommendation,
     ) -> NegotiationResult {
         let common = context.common_suites();
@@ -103,7 +107,7 @@ impl<'a> NegotiationResolver<'a> {
             (true, true) => {
                 let selected = Self::select_by_priority(&[local_suite, remote_suite]).expect(
                     "two valid recommendations \
-                         must produce a selection",
+                     must produce a selection",
                 );
 
                 NegotiationResult::Agreed {

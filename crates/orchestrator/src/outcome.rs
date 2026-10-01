@@ -1,5 +1,4 @@
 use domain::CryptoRecommendation;
-
 use negotiation::NegotiationResult;
 
 #[derive(Debug, Clone, PartialEq)]

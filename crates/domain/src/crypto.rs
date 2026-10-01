@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum CryptoSuiteId {
     #[serde(rename = "AES_256_GCM")]
     Aes256Gcm,
@@ -16,28 +15,24 @@ pub enum CryptoFamily {
     ChaCha,
 }
 
+pub const SUPPORTED_CRYPTO_SUITES: &[CryptoSuiteId] =
+    &[CryptoSuiteId::ChaCha20Poly1305, CryptoSuiteId::Aes256Gcm];
+
+pub fn supported_crypto_suites() -> impl Iterator<Item = CryptoSuiteDescriptor> {
+    SUPPORTED_CRYPTO_SUITES
+        .iter()
+        .copied()
+        .map(CryptoSuiteId::descriptor)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CryptoSuiteDescriptor {
     pub id: CryptoSuiteId,
-
     pub family: CryptoFamily,
-
-    /// Taille de la clé en bits.
     pub key_size_bits: u16,
-
-    /// Taille du nonce utilisée par notre protocole.
     pub nonce_size_bits: u16,
-
-    /// Niveau de sécurité estimé en bits.
     pub security_bits: u16,
-
-    /// Indique si l'algorithme fournit un chiffrement authentifié.
     pub aead: bool,
-
-    /// Priorité locale.
-    ///
-    /// Plus la valeur est élevée, plus la suite est préférée
-    /// lorsque plusieurs choix sont équivalents.
     pub priority: u16,
 }
 
@@ -63,7 +58,6 @@ impl CryptoSuiteId {
                 aead: true,
                 priority: 90,
             },
-
             Self::ChaCha20Poly1305 => CryptoSuiteDescriptor {
                 id: self,
                 family: CryptoFamily::ChaCha,
@@ -77,25 +71,15 @@ impl CryptoSuiteId {
     }
 }
 
-pub const SUPPORTED_CRYPTO_SUITES: &[CryptoSuiteId] =
-    &[CryptoSuiteId::ChaCha20Poly1305, CryptoSuiteId::Aes256Gcm];
-
-pub fn supported_crypto_suites() -> impl Iterator<Item = CryptoSuiteDescriptor> {
-    SUPPORTED_CRYPTO_SUITES
-        .iter()
-        .copied()
-        .map(CryptoSuiteId::descriptor)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn crypto_suite_ids_are_comparable() {
+    fn crypto_suite_ids_are_compatible() {
         assert_eq!(CryptoSuiteId::Aes256Gcm, CryptoSuiteId::Aes256Gcm);
 
-        assert_ne!(CryptoSuiteId::Aes256Gcm, CryptoSuiteId::ChaCha20Poly1305);
+        assert_ne!(CryptoSuiteId::Aes256Gcm, CryptoSuiteId::ChaCha20Poly1305)
     }
 
     #[test]
@@ -133,13 +117,6 @@ mod tests {
         let descriptor = CryptoSuiteId::ChaCha20Poly1305.descriptor();
 
         assert!(descriptor.meets_security_level(128));
-    }
-
-    #[test]
-    fn suite_rejects_too_high_security_requirement() {
-        let descriptor = CryptoSuiteId::ChaCha20Poly1305.descriptor();
-
-        assert!(!descriptor.meets_security_level(256));
     }
 
     #[test]

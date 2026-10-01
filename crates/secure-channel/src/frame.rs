@@ -1,4 +1,4 @@
-use crate::SecureChannelError;
+use crate::error::SecureChannelError;
 
 pub const MAX_PLAINTEXT_SIZE: usize = 60 * 1024;
 

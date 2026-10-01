@@ -1,9 +1,8 @@
 use agent::{CryptoAdvisor, RigCryptoAdvisor};
-
 use domain::{CryptoSuiteId, NegotiationContext, PeerCapabilities, PeerId};
 
 #[tokio::test]
-#[ignore = "requires a running Ollama instance and qwen3.8"]
+#[ignore = "require a running Ollama instance and qwen3.8"]
 async fn ollama_returns_common_crypto_suite() {
     let context = NegotiationContext::new(
         PeerCapabilities::new(
@@ -16,11 +15,11 @@ async fn ollama_returns_common_crypto_suite() {
         ),
     );
 
-    let advisor = RigCryptoAdvisor::new().expect("advisor should be created");
+    let advisor = RigCryptoAdvisor::new().expect("Advisor should be created");
 
     let recommendation = advisor.recommend(&context).await.expect(
         "Ollama should return \
-                 a recommendation",
+            a recommendation",
     );
 
     assert!(context.common_suites().contains(&recommendation.suite()));

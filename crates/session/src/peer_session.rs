@@ -2,8 +2,6 @@ use domain::{
     CryptoRecommendation, CryptoSuiteId, NegotiationContext, PeerCapabilities, PeerId, SessionId,
 };
 
-use negotiation::{NegotiationResolver, NegotiationResult};
-
 use protocol::{
     AuthenticationAck, Capabilities, NegotiationAccept, ProtocolMessage, Recommendation,
 };
@@ -15,18 +13,22 @@ use crate::{SessionError, SessionPhase};
 pub struct PeerSession {
     session_id: SessionId,
     phase: SessionPhase,
+
     connection: AuthenticatedConnection,
+
     local_capabilities: PeerCapabilities,
     remote_capabilities: Option<PeerCapabilities>,
-    local_recommendation: Option<CryptoRecommendation>,
-    remote_recommendation: Option<CryptoRecommendation>,
-    selected_suite: Option<CryptoSuiteId>,
+
     local_ack_sent: bool,
     remote_ack_received: bool,
+
     local_capabilities_sent: bool,
     remote_capabilities_received: bool,
-    local_recommendation_sent: bool,
-    remote_recommendation_received: bool,
+
+    local_recommendation: Option<CryptoRecommendation>,
+    remote_recommendation: Option<CryptoRecommendation>,
+
+    selected_suite: Option<CryptoSuiteId>,
 }
 
 impl PeerSession {
@@ -38,20 +40,28 @@ impl PeerSession {
         Self {
             session_id,
             phase: SessionPhase::Authenticated,
+
             connection,
+
             local_capabilities,
             remote_capabilities: None,
-            local_recommendation: None,
-            remote_recommendation: None,
-            selected_suite: None,
+
             local_ack_sent: false,
             remote_ack_received: false,
+
             local_capabilities_sent: false,
             remote_capabilities_received: false,
-            local_recommendation_sent: false,
-            remote_recommendation_received: false,
+
+            local_recommendation: None,
+            remote_recommendation: None,
+
+            selected_suite: None,
         }
     }
+
+    // ---------------------------------------------------------
+    // Accessors
+    // ---------------------------------------------------------
 
     pub fn session_id(&self) -> &SessionId {
         &self.session_id
@@ -61,206 +71,25 @@ impl PeerSession {
         self.phase
     }
 
-    pub fn remote_capabilities(&self) -> Option<&PeerCapabilities> {
-        self.remote_capabilities.as_ref()
+    pub fn authenticated_peer_id(&self) -> &PeerId {
+        self.connection.peer().peer_id()
     }
 
-    pub fn remote_recommendation(&self) -> Option<&CryptoRecommendation> {
-        self.remote_recommendation.as_ref()
+    pub fn local_capabilities(&self) -> &PeerCapabilities {
+        &self.local_capabilities
+    }
+
+    pub fn remote_capabilities(&self) -> Option<&PeerCapabilities> {
+        self.remote_capabilities.as_ref()
     }
 
     pub fn selected_suite(&self) -> Option<CryptoSuiteId> {
         self.selected_suite
     }
 
-    pub fn authenticated_peer_id(&self) -> &PeerId {
-        self.connection.peer().peer_id()
-    }
-
-    pub fn negotiation_context(&self) -> Result<NegotiationContext, SessionError> {
-        let remote = self
-            .remote_capabilities
-            .clone()
-            .ok_or(SessionError::MissingRemoteCapabilities)?;
-
-        Ok(NegotiationContext::new(
-            self.local_capabilities.clone(),
-            remote,
-        ))
-    }
-
-    pub async fn send_authentication_ack(&mut self) -> Result<(), SessionError> {
-        self.ensure_phase(SessionPhase::Authenticated)?;
-
-        let message = ProtocolMessage::AuthenticationAck(AuthenticationAck {
-            session_id: self.session_id.clone(),
-        });
-
-        self.send_message(&message).await?;
-
-        self.local_ack_sent = true;
-        self.refresh_authentication_phase();
-
-        Ok(())
-    }
-
-    pub async fn receive_authentication_ack(&mut self) -> Result<(), SessionError> {
-        self.ensure_phase(SessionPhase::Authenticated)?;
-
-        let message = self.receive_message().await?;
-        self.validate_session_id(&message)?;
-
-        match message {
-            ProtocolMessage::AuthenticationAck(_) => {
-                self.remote_ack_received = true;
-                self.refresh_authentication_phase();
-                Ok(())
-            }
-            _ => Err(SessionError::UnexpectedMessage { phase: self.phase }),
-        }
-    }
-
-    pub async fn send_capabilities(&mut self) -> Result<(), SessionError> {
-        self.ensure_phase(SessionPhase::PeerConfirmed)?;
-
-        let message = ProtocolMessage::Capabilities(Capabilities {
-            session_id: self.session_id.clone(),
-            supported_suites: self.local_capabilities.supported_suites().to_vec(),
-        });
-
-        self.send_message(&message).await?;
-
-        self.local_capabilities_sent = true;
-        self.refresh_capabilities_phase();
-
-        Ok(())
-    }
-
-    pub async fn receive_capabilities(&mut self) -> Result<(), SessionError> {
-        self.ensure_phase(SessionPhase::PeerConfirmed)?;
-
-        let message = self.receive_message().await?;
-        self.validate_session_id(&message)?;
-
-        match message {
-            ProtocolMessage::Capabilities(capabilities) => {
-                let remote = PeerCapabilities::new(
-                    self.authenticated_peer_id().clone(),
-                    capabilities.supported_suites,
-                );
-
-                self.remote_capabilities = Some(remote);
-                self.remote_capabilities_received = true;
-                self.refresh_capabilities_phase();
-
-                Ok(())
-            }
-            _ => Err(SessionError::UnexpectedMessage { phase: self.phase }),
-        }
-    }
-
-    pub async fn send_recommendation(
-        &mut self,
-        recommendation: CryptoRecommendation,
-    ) -> Result<(), SessionError> {
-        self.ensure_phase(SessionPhase::CapabilitiesExchanged)?;
-
-        let message = ProtocolMessage::Recommendation(Recommendation {
-            session_id: self.session_id.clone(),
-            recommendation: recommendation.clone(),
-        });
-
-        self.send_message(&message).await?;
-
-        self.local_recommendation = Some(recommendation);
-        self.local_recommendation_sent = true;
-        self.refresh_recommendations_phase();
-
-        Ok(())
-    }
-
-    pub async fn receive_recommendation(&mut self) -> Result<(), SessionError> {
-        self.ensure_phase(SessionPhase::CapabilitiesExchanged)?;
-
-        let message = self.receive_message().await?;
-        self.validate_session_id(&message)?;
-
-        match message {
-            ProtocolMessage::Recommendation(message) => {
-                self.remote_recommendation = Some(message.recommendation);
-                self.remote_recommendation_received = true;
-                self.refresh_recommendations_phase();
-
-                Ok(())
-            }
-            _ => Err(SessionError::UnexpectedMessage { phase: self.phase }),
-        }
-    }
-
-    pub async fn resolve_and_send_accept(
-        &mut self,
-        resolver: &NegotiationResolver<'_>,
-    ) -> Result<CryptoSuiteId, SessionError> {
-        self.ensure_phase(SessionPhase::RecommendationsExchanged)?;
-
-        let context = self.negotiation_context()?;
-
-        let local = self
-            .local_recommendation
-            .as_ref()
-            .ok_or(SessionError::MissingRemoteRecommendation)?;
-
-        let remote = self
-            .remote_recommendation
-            .as_ref()
-            .ok_or(SessionError::MissingRemoteRecommendation)?;
-
-        let result = resolver.resolve(&context, local, remote);
-
-        match result {
-            NegotiationResult::Agreed { suite, .. } => {
-                let message = ProtocolMessage::NegotiationAccept(NegotiationAccept {
-                    session_id: self.session_id.clone(),
-                    selected_suite: suite,
-                });
-
-                self.send_message(&message).await?;
-
-                self.selected_suite = Some(suite);
-                self.phase = SessionPhase::Negotiated;
-
-                Ok(suite)
-            }
-            NegotiationResult::Rejected { .. } => Err(SessionError::NegotiationRejected),
-        }
-    }
-
-    pub async fn receive_accept(&mut self) -> Result<CryptoSuiteId, SessionError> {
-        self.ensure_phase(SessionPhase::RecommendationsExchanged)?;
-
-        let message = self.receive_message().await?;
-        self.validate_session_id(&message)?;
-
-        match message {
-            ProtocolMessage::NegotiationAccept(message) => {
-                self.selected_suite = Some(message.selected_suite);
-                self.phase = SessionPhase::Negotiated;
-
-                Ok(message.selected_suite)
-            }
-            _ => Err(SessionError::UnexpectedMessage { phase: self.phase }),
-        }
-    }
-
-    pub fn confirm_ready_for_data(&mut self) -> Result<(), SessionError> {
-        self.ensure_phase(SessionPhase::Negotiated)?;
-        self.phase = SessionPhase::ReadyForData;
-        Ok(())
-    }
-
-    pub fn close(&mut self) {
-        self.phase = SessionPhase::Closed;
-    }
+    // ---------------------------------------------------------
+    // Internal validation
+    // ---------------------------------------------------------
 
     fn ensure_open(&self) -> Result<(), SessionError> {
         if self.phase == SessionPhase::Closed {
@@ -280,19 +109,50 @@ impl PeerSession {
         Ok(())
     }
 
-    fn validate_session_id(&self, message: &ProtocolMessage) -> Result<(), SessionError> {
-        if message.session_id() != &self.session_id {
+    // fn validate_session_id(&self, message: &ProtocolMessage) -> Result<(), SessionError> {
+    //     if message.session_id() != &self.session_id {
+    //         return Err(SessionError::SessionIdMismatch {
+    //             expected: self.session_id.as_str().to_owned(),
+
+    //             received: message.session_id().as_str().to_owned(),
+    //         });
+    //     }
+
+    //     Ok(())
+    // }
+
+    fn validate_session_ids(
+        expected: &SessionId,
+        received: &SessionId,
+    ) -> Result<(), SessionError> {
+        if expected != received {
             return Err(SessionError::SessionIdMismatch {
-                expected: self.session_id.as_str().to_owned(),
-                received: message.session_id().as_str().to_owned(),
+                expected: expected.as_str().to_owned(),
+
+                received: received.as_str().to_owned(),
             });
         }
 
         Ok(())
     }
 
+    fn validate_session_id(&self, message: &ProtocolMessage) -> Result<(), SessionError> {
+        Self::validate_session_ids(&self.session_id, message.session_id())
+    }
+
+    fn transport_error(error: impl std::fmt::Display) -> SessionError {
+        SessionError::Transport(error.to_string())
+    }
+
+    // ---------------------------------------------------------
+    // Phase refresh helpers
+    // ---------------------------------------------------------
+
     fn refresh_authentication_phase(&mut self) {
-        if self.local_ack_sent && self.remote_ack_received {
+        if self.phase == SessionPhase::Authenticated
+            && self.local_ack_sent
+            && self.remote_ack_received
+        {
             self.phase = SessionPhase::PeerConfirmed;
         }
     }
@@ -306,26 +166,335 @@ impl PeerSession {
         }
     }
 
-    fn refresh_recommendations_phase(&mut self) {
+    fn refresh_recommendation_phase(&mut self) {
         if self.phase == SessionPhase::CapabilitiesExchanged
-            && self.local_recommendation_sent
-            && self.remote_recommendation_received
+            && self.local_recommendation.is_some()
+            && self.remote_recommendation.is_some()
         {
             self.phase = SessionPhase::RecommendationsExchanged;
         }
     }
 
-    async fn send_message(&mut self, message: &ProtocolMessage) -> Result<(), SessionError> {
+    // ---------------------------------------------------------
+    // Authentication confirmation
+    // ---------------------------------------------------------
+
+    pub async fn send_authentication_ack(&mut self) -> Result<(), SessionError> {
+        self.ensure_phase(SessionPhase::Authenticated)?;
+
+        if self.local_ack_sent {
+            return Err(SessionError::UnexpectedMessage { phase: self.phase });
+        }
+
+        let message = ProtocolMessage::AuthenticationAck(AuthenticationAck {
+            session_id: self.session_id.clone(),
+        });
+
         self.connection
-            .send(message)
+            .send(&message)
             .await
-            .map_err(|error| SessionError::Transport(error.to_string()))
+            .map_err(Self::transport_error)?;
+
+        self.local_ack_sent = true;
+
+        self.refresh_authentication_phase();
+
+        Ok(())
     }
 
-    async fn receive_message(&mut self) -> Result<ProtocolMessage, SessionError> {
-        self.connection
+    pub async fn receive_authentication_ack(&mut self) -> Result<(), SessionError> {
+        self.ensure_phase(SessionPhase::Authenticated)?;
+
+        if self.remote_ack_received {
+            return Err(SessionError::UnexpectedMessage { phase: self.phase });
+        }
+
+        let message = self
+            .connection
             .receive()
             .await
-            .map_err(|error| SessionError::Transport(error.to_string()))
+            .map_err(Self::transport_error)?;
+
+        self.validate_session_id(&message)?;
+
+        match message {
+            ProtocolMessage::AuthenticationAck(_) => {
+                self.remote_ack_received = true;
+
+                self.refresh_authentication_phase();
+
+                Ok(())
+            }
+
+            _ => Err(SessionError::UnexpectedMessage { phase: self.phase }),
+        }
+    }
+
+    // ---------------------------------------------------------
+    // Capabilities exchange
+    // ---------------------------------------------------------
+
+    pub async fn send_capabilities(&mut self) -> Result<(), SessionError> {
+        self.ensure_phase(SessionPhase::PeerConfirmed)?;
+
+        if self.local_capabilities_sent {
+            return Err(SessionError::UnexpectedMessage { phase: self.phase });
+        }
+
+        let message = ProtocolMessage::Capabilities(Capabilities {
+            session_id: self.session_id.clone(),
+
+            supported_suites: self.local_capabilities.supported_suites().to_vec(),
+        });
+
+        self.connection
+            .send(&message)
+            .await
+            .map_err(Self::transport_error)?;
+
+        self.local_capabilities_sent = true;
+
+        self.refresh_capabilities_phase();
+
+        Ok(())
+    }
+
+    pub async fn receive_capabilities(&mut self) -> Result<(), SessionError> {
+        self.ensure_phase(SessionPhase::PeerConfirmed)?;
+
+        if self.remote_capabilities_received {
+            return Err(SessionError::UnexpectedMessage { phase: self.phase });
+        }
+
+        let message = self
+            .connection
+            .receive()
+            .await
+            .map_err(Self::transport_error)?;
+
+        self.validate_session_id(&message)?;
+
+        match message {
+            ProtocolMessage::Capabilities(capabilities) => {
+                let peer_id = self.connection.peer().peer_id().clone();
+
+                let remote = PeerCapabilities::new(peer_id, capabilities.supported_suites);
+
+                self.remote_capabilities = Some(remote);
+
+                self.remote_capabilities_received = true;
+
+                self.refresh_capabilities_phase();
+
+                Ok(())
+            }
+
+            _ => Err(SessionError::UnexpectedMessage { phase: self.phase }),
+        }
+    }
+
+    // ---------------------------------------------------------
+    // Negotiation context
+    // ---------------------------------------------------------
+
+    pub fn negotiation_context(&self) -> Option<NegotiationContext> {
+        let remote = self.remote_capabilities.as_ref()?;
+
+        Some(NegotiationContext::new(
+            self.local_capabilities.clone(),
+            remote.clone(),
+        ))
+    }
+
+    // ---------------------------------------------------------
+    // Recommendation exchange
+    // ---------------------------------------------------------
+
+    pub async fn send_recommendation(
+        &mut self,
+        recommendation: CryptoRecommendation,
+    ) -> Result<(), SessionError> {
+        self.ensure_phase(SessionPhase::CapabilitiesExchanged)?;
+
+        if self.local_recommendation.is_some() {
+            return Err(SessionError::UnexpectedMessage { phase: self.phase });
+        }
+
+        let context = self
+            .negotiation_context()
+            .ok_or(SessionError::UnexpectedMessage { phase: self.phase })?;
+
+        if !context.common_suites().contains(&recommendation.suite()) {
+            return Err(SessionError::InvalidRecommendation);
+        }
+
+        let message = ProtocolMessage::Recommendation(Recommendation {
+            session_id: self.session_id.clone(),
+
+            recommendation: recommendation.clone(),
+        });
+
+        self.connection
+            .send(&message)
+            .await
+            .map_err(Self::transport_error)?;
+
+        self.local_recommendation = Some(recommendation);
+
+        self.refresh_recommendation_phase();
+
+        Ok(())
+    }
+
+    pub async fn receive_recommendation(&mut self) -> Result<(), SessionError> {
+        self.ensure_phase(SessionPhase::CapabilitiesExchanged)?;
+
+        if self.remote_recommendation.is_some() {
+            return Err(SessionError::UnexpectedMessage { phase: self.phase });
+        }
+
+        let message = self
+            .connection
+            .receive()
+            .await
+            .map_err(Self::transport_error)?;
+
+        self.validate_session_id(&message)?;
+
+        match message {
+            ProtocolMessage::Recommendation(recommendation) => {
+                let context = self
+                    .negotiation_context()
+                    .ok_or(SessionError::UnexpectedMessage { phase: self.phase })?;
+
+                if !context
+                    .common_suites()
+                    .contains(&recommendation.recommendation.suite())
+                {
+                    return Err(SessionError::InvalidRecommendation);
+                }
+
+                self.remote_recommendation = Some(recommendation.recommendation);
+
+                self.refresh_recommendation_phase();
+
+                Ok(())
+            }
+
+            _ => Err(SessionError::UnexpectedMessage { phase: self.phase }),
+        }
+    }
+
+    pub fn recommendations(&self) -> Option<(&CryptoRecommendation, &CryptoRecommendation)> {
+        Some((
+            self.local_recommendation.as_ref()?,
+            self.remote_recommendation.as_ref()?,
+        ))
+    }
+
+    // ---------------------------------------------------------
+    // Negotiation confirmation
+    // ---------------------------------------------------------
+
+    pub async fn send_negotiation_accept(
+        &mut self,
+        suite: CryptoSuiteId,
+    ) -> Result<(), SessionError> {
+        self.ensure_phase(SessionPhase::RecommendationsExchanged)?;
+
+        if self.selected_suite.is_some() {
+            return Err(SessionError::UnexpectedMessage { phase: self.phase });
+        }
+
+        let context = self
+            .negotiation_context()
+            .ok_or(SessionError::UnexpectedMessage { phase: self.phase })?;
+
+        if !context.common_suites().contains(&suite) {
+            return Err(SessionError::InvalidNegotiatedSuite);
+        }
+
+        let message = ProtocolMessage::NegotiationAccept(NegotiationAccept {
+            session_id: self.session_id.clone(),
+
+            selected_suite: suite,
+        });
+
+        self.connection
+            .send(&message)
+            .await
+            .map_err(Self::transport_error)?;
+
+        self.selected_suite = Some(suite);
+
+        Ok(())
+    }
+
+    pub async fn receive_negotiation_accept(&mut self) -> Result<(), SessionError> {
+        self.ensure_phase(SessionPhase::RecommendationsExchanged)?;
+
+        let local_suite = self
+            .selected_suite
+            .ok_or(SessionError::UnexpectedMessage { phase: self.phase })?;
+
+        let message = self
+            .connection
+            .receive()
+            .await
+            .map_err(Self::transport_error)?;
+
+        self.validate_session_id(&message)?;
+
+        match message {
+            ProtocolMessage::NegotiationAccept(accept) => {
+                if accept.selected_suite != local_suite {
+                    return Err(SessionError::NegotiationMismatch);
+                }
+
+                self.phase = SessionPhase::Negotiated;
+
+                Ok(())
+            }
+
+            _ => Err(SessionError::UnexpectedMessage { phase: self.phase }),
+        }
+    }
+
+    // ---------------------------------------------------------
+    // Session lifecycle
+    // ---------------------------------------------------------
+
+    pub fn close(&mut self) {
+        self.phase = SessionPhase::Closed;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn matching_session_ids_are_accepted() {
+        let expected = SessionId::new("session-123");
+
+        let received = SessionId::new("session-123");
+
+        let result = PeerSession::validate_session_ids(&expected, &received);
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn different_session_ids_are_rejected() {
+        let expected = SessionId::new("session-123");
+
+        let received = SessionId::new("session-999");
+
+        let result = PeerSession::validate_session_ids(&expected, &received);
+
+        assert!(matches!(
+            result,
+            Err(SessionError::SessionIdMismatch { .. })
+        ));
     }
 }

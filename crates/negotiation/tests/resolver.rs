@@ -4,19 +4,6 @@ use domain::{CryptoRecommendation, CryptoSuiteId, NegotiationContext, PeerCapabi
 
 use negotiation::{NegotiationFailure, NegotiationResolver, NegotiationResult};
 
-fn context_with_both_suites() -> NegotiationContext {
-    NegotiationContext::new(
-        PeerCapabilities::new(
-            PeerId::new("proxy-a"),
-            vec![CryptoSuiteId::Aes256Gcm, CryptoSuiteId::ChaCha20Poly1305],
-        ),
-        PeerCapabilities::new(
-            PeerId::new("proxy-b"),
-            vec![CryptoSuiteId::Aes256Gcm, CryptoSuiteId::ChaCha20Poly1305],
-        ),
-    )
-}
-
 #[test]
 fn negotiation_fails_when_no_common_suite_exists() {
     let context = NegotiationContext::new(
@@ -69,13 +56,25 @@ fn single_usable_suite_is_selected() {
     let remote = CryptoRecommendation::new(CryptoSuiteId::ChaCha20Poly1305, "remote", 0.9);
 
     assert_eq!(
-        resolver.resolve(&context, &local, &remote,),
+        resolver.resolve(&context, &local, &remote),
         NegotiationResult::Agreed {
             suite: CryptoSuiteId::ChaCha20Poly1305,
-
             reason: negotiation::AgreementReason::SingleUsableSuite,
         }
     );
+}
+
+fn context_with_both_suites() -> NegotiationContext {
+    NegotiationContext::new(
+        PeerCapabilities::new(
+            PeerId::new("proxy-a"),
+            vec![CryptoSuiteId::Aes256Gcm, CryptoSuiteId::ChaCha20Poly1305],
+        ),
+        PeerCapabilities::new(
+            PeerId::new("proxy-b"),
+            vec![CryptoSuiteId::Aes256Gcm, CryptoSuiteId::ChaCha20Poly1305],
+        ),
+    )
 }
 
 #[test]
@@ -93,12 +92,11 @@ fn identical_recommendations_are_accepted() {
     let remote = CryptoRecommendation::new(CryptoSuiteId::ChaCha20Poly1305, "remote", 0.8);
 
     assert_eq!(
-        resolver.resolve(&context, &local, &remote,),
+        resolver.resolve(&context, &local, &remote),
         NegotiationResult::Agreed {
             suite: CryptoSuiteId::ChaCha20Poly1305,
-
-            reason: negotiation::AgreementReason::BothAgentsAgreed,
-        }
+            reason: negotiation::AgreementReason::BothAgentsAgreed
+        },
     );
 }
 

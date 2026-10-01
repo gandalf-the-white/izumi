@@ -1,12 +1,9 @@
-use domain::PeerId;
+use domain::{CryptoSuiteId, PeerId, SessionId};
 
 use identity::{TrustStore, generate_keypair};
 
-use secure_channel::{SecureChannelPair, establish_in_memory};
-
-use domain::{CryptoSuiteId, SessionId};
-
 use protocol::{Capabilities, ProtocolMessage};
+use secure_channel::{SecureChannelPair, establish_in_memory};
 
 fn build_test_channel_pair() -> SecureChannelPair {
     // Create identities

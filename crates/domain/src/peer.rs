@@ -41,7 +41,7 @@ impl PeerCapabilities {
         self.supported_suites.contains(&suite)
     }
 
-    pub fn supported_descriptors(&self) -> impl Iterator<Item = CryptoSuiteDescriptor> + '_ {
+    pub fn supported_descriptor(&self) -> impl Iterator<Item = CryptoSuiteDescriptor> + '_ {
         self.supported_suites
             .iter()
             .copied()
@@ -57,7 +57,7 @@ mod tests {
     fn peer_id_can_be_created() {
         let peer_id = PeerId::new("proxy-a");
 
-        assert_eq!(peer_id.as_str(), "proxy-a");
+        assert_eq!(peer_id.as_str(), "proxy-a")
     }
 
     #[test]
@@ -71,7 +71,7 @@ mod tests {
     }
 
     #[test]
-    fn peer_capabilities_reports_unsupported_suite() {
+    fn peer_capabilities_reports_unsurported_suite() {
         let capabilities =
             PeerCapabilities::new(PeerId::new("proxy-a"), vec![CryptoSuiteId::Aes256Gcm]);
 
@@ -79,16 +79,16 @@ mod tests {
     }
 
     #[test]
-    fn peer_can_expose_suite_descriptors() {
+    fn peer_can_expose_suite_descriptor() {
         let capabilities = PeerCapabilities::new(
             PeerId::new("proxy-a"),
             vec![CryptoSuiteId::Aes256Gcm, CryptoSuiteId::ChaCha20Poly1305],
         );
 
-        let descriptors: Vec<_> = capabilities.supported_descriptors().collect();
+        let descriptor: Vec<_> = capabilities.supported_descriptor().collect();
 
-        assert_eq!(descriptors.len(), 2);
+        assert_eq!(descriptor.len(), 2);
 
-        assert!(descriptors.iter().all(|descriptor| descriptor.aead));
+        assert!(descriptor.iter().all(|descriptor| descriptor.aead));
     }
 }

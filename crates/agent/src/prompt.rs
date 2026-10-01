@@ -27,7 +27,7 @@ A deterministic security policy will validate the result.
 "#;
 
 pub fn build_crypto_advisor_prompt(context: &NegotiationContext) -> Result<String, AdvisorError> {
-    let common = context.common_suite_descriptors();
+    let common = context.common_suite_descriptor();
 
     if common.is_empty() {
         return Err(AdvisorError::NoCommonSuite);
@@ -62,9 +62,9 @@ pub fn build_crypto_advisor_prompt(context: &NegotiationContext) -> Result<Strin
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use domain::{CryptoSuiteId, PeerCapabilities, PeerId};
+
+    use super::*;
 
     #[test]
     fn prompt_contains_only_common_suites() {
@@ -79,10 +79,10 @@ mod tests {
             ),
         );
 
-        let prompt = build_crypto_advisor_prompt(&context).expect("prompt should be generated");
+        let prompt = build_crypto_advisor_prompt(&context).expect("Prompt should be generated");
 
         assert!(prompt.contains("ChaCha20Poly1305"));
 
-        assert!(!prompt.contains("- Aes256Gcm\n"));
+        assert!(!prompt.contains("- Aes256Gcm"));
     }
 }

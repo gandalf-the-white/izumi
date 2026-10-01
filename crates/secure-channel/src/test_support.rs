@@ -1,9 +1,7 @@
 use domain::PeerId;
-
 use identity::{
     AuthenticatedPeer, PeerKeypair, PeerPublicKey, TrustStore, build_initiator, build_responder,
 };
-
 use snow::HandshakeState;
 
 use crate::{SecureChannel, SecureChannelError};

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use domain::PeerId;
 
-use crate::{AuthenticatedPeer, IdentityError, PeerPublicKey};
+use crate::{authenticated_peer::AuthenticatedPeer, error::IdentityError, keypair::PeerPublicKey};
 
 #[derive(Debug, Default)]
 pub struct TrustStore {

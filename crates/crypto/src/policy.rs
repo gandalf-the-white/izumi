@@ -31,7 +31,7 @@ impl CryptoPolicy {
         self.minimum_security_bits
     }
 
-    pub fn require_aead(&self) -> bool {
+    pub fn required_aead(&self) -> bool {
         self.require_aead
     }
 
@@ -91,6 +91,52 @@ impl CryptoPolicyEngine {
     pub fn policy(&self) -> &CryptoPolicy {
         &self.policy
     }
+
+    // pub fn evaluate(
+    //     &self,
+    //     recommendation: &CryptoRecommendation,
+    //     registry: &CryptoRegistry,
+    // ) -> PolicyDecision {
+    //     let suite = recommendation.suite();
+
+    //     if self.policy.denied_suites.contains(&suite) {
+    //         return PolicyDecision::Rejected {
+    //             violation: PolicyViolation::SuiteDenied(suite),
+    //         };
+    //     }
+
+    //     if !self.policy.allowed_suites.contains(&suite) {
+    //         return PolicyDecision::Rejected {
+    //             violation: PolicyViolation::SuiteNotAllowed(suite),
+    //         };
+    //     };
+
+    //     let descriptor = suite.descriptor();
+
+    //     if descriptor.security_bits < self.policy.minimum_security_bits {
+    //         return PolicyDecision::Rejected {
+    //             violation: PolicyViolation::SecurityLevelTooLow {
+    //                 suite,
+    //                 actual_bits: descriptor.security_bits,
+    //                 minimum_bits: self.policy.minimum_security_bits,
+    //             },
+    //         };
+    //     }
+
+    //     if self.policy.require_aead && !descriptor.aead {
+    //         return PolicyDecision::Rejected {
+    //             violation: PolicyViolation::AeadRequired { suite },
+    //         };
+    //     }
+
+    //     if !registry.contains(suite) {
+    //         return PolicyDecision::Rejected {
+    //             violation: PolicyViolation::SuiteUnavailable { suite },
+    //         };
+    //     }
+
+    //     PolicyDecision::Accepted { suite }
+    // }
 
     pub fn evaluate_suite(
         &self,

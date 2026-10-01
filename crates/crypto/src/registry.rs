@@ -1,15 +1,13 @@
+use std::collections::HashMap;
+
 use domain::CryptoSuiteId;
 use thiserror::Error;
 
-use std::collections::HashMap;
-
-use crate::provider::CryptoProvider;
-
-use crate::provider::{Aes256GcmProvider, ChaCha20Poly1305Provider};
+use crate::{Aes256GcmProvider, ChaCha20Poly1305Provider, provider::CryptoProvider};
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum CryptoRegistryError {
-    #[error("crypto suite {0:?} is not registered")]
+    #[error("crypto suite: {0:?} is not registered")]
     SuiteNotRegistered(CryptoSuiteId),
 
     #[error("crypto suite {0:?} is already registered")]
@@ -31,13 +29,13 @@ impl CryptoRegistry {
         let mut registry = Self::new();
 
         registry.register(ChaCha20Poly1305Provider).expect(
-            "default ChaCha20Poly1305 provider \
-                 must register",
+            "Default ChaCha20Poly1305 provider \
+             must register",
         );
 
         registry.register(Aes256GcmProvider).expect(
-            "default AES256GCM provider \
-                 must register",
+            "Default AES256GCM provider \
+             must register",
         );
 
         registry
@@ -101,6 +99,7 @@ mod tests {
         let registry = CryptoRegistry::new();
 
         assert!(registry.is_empty());
+
         assert_eq!(registry.len(), 0);
     }
 
@@ -110,7 +109,7 @@ mod tests {
 
         registry
             .register(ChaCha20Poly1305Provider)
-            .expect("provider should register");
+            .expect("Provider should register");
 
         assert!(registry.contains(CryptoSuiteId::ChaCha20Poly1305));
 
@@ -123,11 +122,11 @@ mod tests {
 
         registry
             .register(Aes256GcmProvider)
-            .expect("provider should register");
+            .expect("Provider should register");
 
         let provider = registry
             .get(CryptoSuiteId::Aes256Gcm)
-            .expect("provider should exist");
+            .expect("Provider should exist");
 
         assert_eq!(provider.suite_id(), CryptoSuiteId::Aes256Gcm);
     }
@@ -136,10 +135,9 @@ mod tests {
     fn duplicate_provider_is_rejected() {
         let mut registry = CryptoRegistry::new();
 
-        registry.register(Aes256GcmProvider).expect(
-            "first registration \
-                 should succeed",
-        );
+        registry
+            .register(Aes256GcmProvider)
+            .expect("First registration should succeed");
 
         let result = registry.register(Aes256GcmProvider);
 

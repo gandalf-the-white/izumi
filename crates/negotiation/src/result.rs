@@ -20,9 +20,9 @@ pub enum AgreementReason {
 
     DeterministicResolution,
 
-    SingleUsableSuite,
-
     DeterministicFallback,
+
+    SingleUsableSuite,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

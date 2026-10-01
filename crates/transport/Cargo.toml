@@ -5,11 +5,12 @@ version.workspace = true
 license.workspace = true
 
 [dependencies]
+domain = { path = "../domain" }
 protocol = { path = "../protocol" }
 secure-channel = { path = "../secure-channel" }
-domain = { path = "../domain" }
 identity = { path = "../identity" }
-thiserror = "2.0.20"
+
+thiserror = "2.0.21"
 tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "sync", "io-util", "net"] }
 snow = "0.10.0"
 
