@@ -27,21 +27,21 @@ impl DataFrame {
     }
 }
 
-// #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-// pub enum DataDirection {
-//     InitiatorToResponder,
-//     ResponderToInitiator,
-// }
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataDirection {
+    InitiatorToResponder,
+    ResponderToInitiator,
+}
 
-// impl DataDirection {
-//     pub fn as_byte(self) -> u8 {
-//         match self {
-//             Self::InitiatorToResponder => 0x01,
+impl DataDirection {
+    pub fn as_byte(self) -> u8 {
+        match self {
+            Self::InitiatorToResponder => 0x01,
 
-//             Self::ResponderToInitiator => 0x02,
-//         }
-//     }
-// }
+            Self::ResponderToInitiator => 0x02,
+        }
+    }
+}
 
 // fn build_aad(session_id: &SessionId, direction: DataDirection, sequence: u64) -> Vec<u8> {
 //     let session = session_id.as_str().as_bytes();

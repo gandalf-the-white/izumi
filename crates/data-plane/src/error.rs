@@ -31,4 +31,13 @@ pub enum DataPlaneError {
 
     #[error("empty data frame")]
     EmptyFrame,
+
+    #[error("unexpected sequence: expected {expected}, received {received}")]
+    UnexpectedSequence { expected: u64, received: u64 },
+
+    #[error("sequence number exhausted")]
+    SequenceExhausted,
+
+    #[error("cryptographic error: {0}")]
+    Crypto(String),
 }

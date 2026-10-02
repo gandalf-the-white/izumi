@@ -9,7 +9,7 @@ crypto = { path = "../crypto" }
 domain = { path = "../domain" }
 
 thiserror = "2.0.21"
-tokio = { version = "1.53.1", features = ["io-util"] }
+tokio = { version = "1.53.1", features = ["io-util", "net"] }
 
 [dev-dependencies]
-tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "io-util"] }
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "io-util", "net"] }
