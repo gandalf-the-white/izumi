@@ -1,7 +1,7 @@
-pub mod codec;
-pub mod message;
-pub mod session;
-pub mod version;
+mod codec;
+mod message;
+mod session;
+mod version;
 
 pub use codec::{JsonCodec, JsonCodecError, ProtocolCodec};
 

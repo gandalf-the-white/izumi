@@ -1,0 +1,15 @@
+[package]
+name = "data-plane"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+crypto = { path = "../crypto" }
+domain = { path = "../domain" }
+
+thiserror = "2.0.21"
+tokio = { version = "1.53.1", features = ["io-util"] }
+
+[dev-dependencies]
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "io-util"] }

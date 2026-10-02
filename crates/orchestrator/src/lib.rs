@@ -1,5 +1,5 @@
-pub mod coordinator;
-pub mod outcome;
+mod coordinator;
+mod outcome;
 
 pub use coordinator::NegotiationCoordinator;
 

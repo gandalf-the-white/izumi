@@ -1,7 +1,7 @@
-pub mod crypto;
-pub mod negotiation;
-pub mod peer;
-pub mod session;
+mod crypto;
+mod negotiation;
+mod peer;
+mod session;
 
 pub use crypto::{
     CryptoFamily, CryptoSuiteDescriptor, CryptoSuiteId, SUPPORTED_CRYPTO_SUITES,

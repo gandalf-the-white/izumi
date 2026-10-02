@@ -4,6 +4,7 @@ resolver = "3"
 members = [
         "crates/agent",
         "crates/crypto",
+        "crates/data-plane",
         "crates/domain",
         "crates/identity",
         "crates/negotiation",

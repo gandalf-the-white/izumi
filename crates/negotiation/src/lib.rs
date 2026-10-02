@@ -1,5 +1,5 @@
-pub mod resolver;
-pub mod result;
+mod resolver;
+mod result;
 
 pub use resolver::NegotiationResolver;
 
