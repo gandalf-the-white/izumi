@@ -9,6 +9,7 @@ domain = { path = "../domain" }
 protocol = { path = "../protocol" }
 transport = { path = "../transport" }
 crypto = { path = "../crypto" }
+data-plane = { path = "../data-plane" }
 
 thiserror = "2.0.21"
 

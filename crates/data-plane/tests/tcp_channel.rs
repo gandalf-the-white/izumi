@@ -1,6 +1,6 @@
 use crypto::{ChaCha20Poly1305DataCipher, DataCipher};
 
-use data_plane::{DataDirection, DataFrameCodec, DataPlaneChannel};
+use data_plane::{DataDirection, DataFrameCodec, DataPlaneChannel, DataPlaneConfig};
 
 use domain::SessionId;
 
@@ -19,13 +19,21 @@ fn initiator_channel(
     i2r_key: &[u8; 32],
     r2i_key: &[u8; 32],
 ) -> DataPlaneChannel<TcpStream> {
-    DataPlaneChannel::new(
-        stream,
+    let config = DataPlaneConfig::new(
         session_id,
         cipher(i2r_key),
         cipher(r2i_key),
         DataDirection::InitiatorToResponder,
         DataDirection::ResponderToInitiator,
+    );
+    DataPlaneChannel::new(
+        stream,
+        config,
+        // session_id,
+        // cipher(i2r_key),
+        // cipher(r2i_key),
+        // DataDirection::InitiatorToResponder,
+        // DataDirection::ResponderToInitiator,
     )
 }
 
@@ -35,13 +43,21 @@ fn responder_channel(
     i2r_key: &[u8; 32],
     r2i_key: &[u8; 32],
 ) -> DataPlaneChannel<TcpStream> {
-    DataPlaneChannel::new(
-        stream,
+    let config = DataPlaneConfig::new(
         session_id,
         cipher(r2i_key),
         cipher(i2r_key),
         DataDirection::ResponderToInitiator,
         DataDirection::InitiatorToResponder,
+    );
+    DataPlaneChannel::new(
+        stream,
+        config,
+        // session_id,
+        // cipher(r2i_key),
+        // cipher(i2r_key),
+        // DataDirection::ResponderToInitiator,
+        // DataDirection::InitiatorToResponder,
     )
 }
 

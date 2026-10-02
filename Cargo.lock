@@ -6222,6 +6222,7 @@ name = "session"
 version = "0.1.0"
 dependencies = [
  "crypto",
+ "data-plane",
  "domain",
  "identity",
  "protocol",

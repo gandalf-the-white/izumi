@@ -1,4 +1,5 @@
-use crypto::{CryptoRegistry, DataCipher, EphemeralKeyExchange, derive_directional_keys};
+use crypto::{CryptoRegistry, EphemeralKeyExchange, derive_directional_keys};
+use data_plane::{DataDirection, DataPlaneConfig};
 use domain::{
     CryptoRecommendation, CryptoSuiteId, NegotiationContext, PeerCapabilities, PeerId, SessionId,
 };
@@ -44,14 +45,12 @@ pub struct PeerSession {
 
     key_exchange: Option<EphemeralKeyExchange>,
 
-    send_cipher: Option<Box<dyn DataCipher>>,
+    // send_cipher: Option<Box<dyn DataCipher>>,
 
-    receive_cipher: Option<Box<dyn DataCipher>>,
-
+    // receive_cipher: Option<Box<dyn DataCipher>>,
     remote_data_public_key: Option<[u8; 32]>,
-
-    send_sequence: u64,
-    receive_sequence: u64,
+    // send_sequence: u64,
+    // receive_sequence: u64,
 }
 
 impl PeerSession {
@@ -85,14 +84,12 @@ impl PeerSession {
 
             key_exchange: None,
 
-            send_cipher: None,
+            // send_cipher: None,
 
-            receive_cipher: None,
-
+            // receive_cipher: None,
             remote_data_public_key: None,
-
-            send_sequence: 0,
-            receive_sequence: 0,
+            // send_sequence: 0,
+            // receive_sequence: 0,
         }
     }
 
@@ -145,18 +142,6 @@ impl PeerSession {
 
         Ok(())
     }
-
-    // fn validate_session_id(&self, message: &ProtocolMessage) -> Result<(), SessionError> {
-    //     if message.session_id() != &self.session_id {
-    //         return Err(SessionError::SessionIdMismatch {
-    //             expected: self.session_id.as_str().to_owned(),
-
-    //             received: message.session_id().as_str().to_owned(),
-    //         });
-    //     }
-
-    //     Ok(())
-    // }
 
     fn validate_session_ids(
         expected: &SessionId,
@@ -571,7 +556,10 @@ impl PeerSession {
         }
     }
 
-    pub fn initialize_data_plane(&mut self, registry: &CryptoRegistry) -> Result<(), SessionError> {
+    pub fn initialize_data_plane(
+        &mut self,
+        registry: &CryptoRegistry,
+    ) -> Result<DataPlaneConfig, SessionError> {
         self.ensure_phase(SessionPhase::DataKeysEstablished)?;
 
         let exchange = self
@@ -593,10 +581,20 @@ impl PeerSession {
         let keys = derive_directional_keys(&shared_secret, self.session_id.as_str(), suite.label())
             .map_err(|error| SessionError::DataCrypto(error.to_string()))?;
 
-        let (send_key, receive_key) = match self.role {
-            SessionRole::Initiator => (keys.initiator_to_responder, keys.responder_to_initiator),
+        let (send_key, receive_key, send_direction, receive_direction) = match self.role {
+            SessionRole::Initiator => (
+                keys.initiator_to_responder,
+                keys.responder_to_initiator,
+                DataDirection::InitiatorToResponder,
+                DataDirection::ResponderToInitiator,
+            ),
 
-            SessionRole::Responder => (keys.responder_to_initiator, keys.initiator_to_responder),
+            SessionRole::Responder => (
+                keys.responder_to_initiator,
+                keys.initiator_to_responder,
+                DataDirection::ResponderToInitiator,
+                DataDirection::InitiatorToResponder,
+            ),
         };
 
         let send_cipher = registry
@@ -607,81 +605,17 @@ impl PeerSession {
             .create_data_cipher(suite, &receive_key)
             .map_err(|error| SessionError::DataCrypto(error.to_string()))?;
 
-        self.send_cipher = Some(send_cipher);
-
-        self.receive_cipher = Some(receive_cipher);
+        let config = DataPlaneConfig::new(
+            self.session_id.clone(),
+            send_cipher,
+            receive_cipher,
+            send_direction,
+            receive_direction,
+        );
 
         self.phase = SessionPhase::ReadyForData;
 
-        Ok(())
-    }
-
-    // pub fn encrypt_data(&mut self, plaintext: &[u8]) -> Result<Vec<u8>, SessionError> {
-    //     self.ensure_phase(SessionPhase::ReadyForData)?;
-
-    //     let aad = self.session_id.as_str().as_bytes();
-
-    //     self.send_cipher
-    //         .as_mut()
-    //         .ok_or(SessionError::DataKeysUnavailable)?
-    //         .encrypt(plaintext, aad)
-    //         .map_err(|error| SessionError::DataCrypto(error.to_string()))
-    // }
-
-    pub fn encrypt_data(&mut self, plaintext: &[u8]) -> Result<Vec<u8>, SessionError> {
-        self.ensure_phase(SessionPhase::ReadyForData)?;
-
-        let sequence = self.send_sequence;
-
-        let aad = self.session_id.as_str().as_bytes();
-
-        let ciphertext = self
-            .send_cipher
-            .as_ref()
-            .ok_or(SessionError::DataKeysUnavailable)?
-            .encrypt(sequence, plaintext, aad)
-            .map_err(|error| SessionError::DataCrypto(error.to_string()))?;
-
-        self.send_sequence = self
-            .send_sequence
-            .checked_add(1)
-            .ok_or_else(|| SessionError::DataCrypto("send sequence exhausted".to_owned()))?;
-
-        Ok(ciphertext)
-    }
-
-    // pub fn decrypt_data(&mut self, ciphertext: &[u8]) -> Result<Vec<u8>, SessionError> {
-    //     self.ensure_phase(SessionPhase::ReadyForData)?;
-
-    //     let aad = self.session_id.as_str().as_bytes();
-
-    //     self.receive_cipher
-    //         .as_mut()
-    //         .ok_or(SessionError::DataKeysUnavailable)?
-    //         .decrypt(ciphertext, aad)
-    //         .map_err(|error| SessionError::DataCrypto(error.to_string()))
-    // }
-
-    pub fn decrypt_data(&mut self, ciphertext: &[u8]) -> Result<Vec<u8>, SessionError> {
-        self.ensure_phase(SessionPhase::ReadyForData)?;
-
-        let sequence = self.receive_sequence;
-
-        let aad = self.session_id.as_str().as_bytes();
-
-        let plaintext = self
-            .receive_cipher
-            .as_ref()
-            .ok_or(SessionError::DataKeysUnavailable)?
-            .decrypt(sequence, ciphertext, aad)
-            .map_err(|error| SessionError::DataCrypto(error.to_string()))?;
-
-        self.receive_sequence = self
-            .receive_sequence
-            .checked_add(1)
-            .ok_or_else(|| SessionError::DataCrypto("receive sequence exhausted".to_owned()))?;
-
-        Ok(plaintext)
+        Ok(config)
     }
 }
 

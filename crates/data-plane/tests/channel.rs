@@ -1,6 +1,6 @@
 use crypto::{ChaCha20Poly1305DataCipher, DataCipher};
 
-use data_plane::{DataDirection, DataPlaneChannel, DataPlaneError};
+use data_plane::{DataDirection, DataPlaneChannel, DataPlaneConfig, DataPlaneError};
 
 use domain::SessionId;
 
@@ -20,22 +20,38 @@ fn make_channels(
 
     let responder_to_initiator = [0x22_u8; 32];
 
-    let channel_a = DataPlaneChannel::new(
-        stream_a,
+    let config_a = DataPlaneConfig::new(
         session_id.clone(),
         cipher(&initiator_to_responder),
         cipher(&responder_to_initiator),
         DataDirection::InitiatorToResponder,
         DataDirection::ResponderToInitiator,
     );
+    let channel_a = DataPlaneChannel::new(
+        stream_a,
+        config_a,
+        // session_id.clone(),
+        // cipher(&initiator_to_responder),
+        // cipher(&responder_to_initiator),
+        // DataDirection::InitiatorToResponder,
+        // DataDirection::ResponderToInitiator,
+    );
 
-    let channel_b = DataPlaneChannel::new(
-        stream_b,
+    let config_b = DataPlaneConfig::new(
         session_id,
         cipher(&responder_to_initiator),
         cipher(&initiator_to_responder),
         DataDirection::ResponderToInitiator,
         DataDirection::InitiatorToResponder,
+    );
+    let channel_b = DataPlaneChannel::new(
+        stream_b,
+        config_b,
+        // session_id,
+        // cipher(&responder_to_initiator),
+        // cipher(&initiator_to_responder),
+        // DataDirection::ResponderToInitiator,
+        // DataDirection::InitiatorToResponder,
     );
 
     (channel_a, channel_b)
@@ -129,22 +145,38 @@ async fn different_session_ids_are_rejected() {
 
     let r2i = [0x22_u8; 32];
 
-    let mut channel_a = DataPlaneChannel::new(
-        stream_a,
+    let config_a = DataPlaneConfig::new(
         SessionId::new("session-A"),
         cipher(&i2r),
         cipher(&r2i),
         DataDirection::InitiatorToResponder,
         DataDirection::ResponderToInitiator,
     );
+    let mut channel_a = DataPlaneChannel::new(
+        stream_a,
+        config_a,
+        // SessionId::new("session-A"),
+        // cipher(&i2r),
+        // cipher(&r2i),
+        // DataDirection::InitiatorToResponder,
+        // DataDirection::ResponderToInitiator,
+    );
 
-    let mut channel_b = DataPlaneChannel::new(
-        stream_b,
+    let config_b = DataPlaneConfig::new(
         SessionId::new("session-B"),
         cipher(&r2i),
         cipher(&i2r),
         DataDirection::ResponderToInitiator,
         DataDirection::InitiatorToResponder,
+    );
+    let mut channel_b = DataPlaneChannel::new(
+        stream_b,
+        config_b,
+        // SessionId::new("session-B"),
+        // cipher(&r2i),
+        // cipher(&i2r),
+        // DataDirection::ResponderToInitiator,
+        // DataDirection::InitiatorToResponder,
     );
 
     channel_a.send(b"secret").await.unwrap();
@@ -164,23 +196,40 @@ async fn wrong_direction_is_rejected() {
 
     let session = SessionId::new("direction-test");
 
-    let mut channel_a = DataPlaneChannel::new(
-        stream_a,
+    let config_a = DataPlaneConfig::new(
         session.clone(),
         cipher(&i2r),
         cipher(&r2i),
         DataDirection::InitiatorToResponder,
         DataDirection::ResponderToInitiator,
     );
+    let mut channel_a = DataPlaneChannel::new(
+        stream_a,
+        config_a,
+        // session.clone(),
+        // cipher(&i2r),
+        // cipher(&r2i),
+        // DataDirection::InitiatorToResponder,
+        // DataDirection::ResponderToInitiator,
+    );
 
-    let mut channel_b = DataPlaneChannel::new(
-        stream_b,
+    let config_b = DataPlaneConfig::new(
         session,
         cipher(&r2i),
         cipher(&i2r),
         DataDirection::ResponderToInitiator,
         // volontairement faux
         DataDirection::ResponderToInitiator,
+    );
+    let mut channel_b = DataPlaneChannel::new(
+        stream_b,
+        config_b,
+        // session,
+        // cipher(&r2i),
+        // cipher(&i2r),
+        // DataDirection::ResponderToInitiator,
+        // volontairement faux
+        // DataDirection::ResponderToInitiator,
     );
 
     channel_a.send(b"secret").await.unwrap();

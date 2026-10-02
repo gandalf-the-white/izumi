@@ -2,7 +2,10 @@ use crypto::DataCipher;
 use domain::SessionId;
 use tokio::io::{AsyncRead, AsyncWrite};
 
-use crate::{DataFrame, DataFrameCodec, DataPlaneError, aad::build_aad, frame::DataDirection};
+use crate::{
+    DataFrame, DataFrameCodec, DataPlaneConfig, DataPlaneError, aad::build_aad,
+    frame::DataDirection,
+};
 
 pub struct DataPlaneChannel<T> {
     codec: DataFrameCodec<T>,
@@ -24,12 +27,15 @@ pub struct DataPlaneChannel<T> {
 impl<T> DataPlaneChannel<T> {
     pub fn new(
         io: T,
-        session_id: SessionId,
-        send_cipher: Box<dyn DataCipher>,
-        receive_cipher: Box<dyn DataCipher>,
-        send_direction: DataDirection,
-        receive_direction: DataDirection,
+        config: DataPlaneConfig,
+        // session_id: SessionId,
+        // send_cipher: Box<dyn DataCipher>,
+        // receive_cipher: Box<dyn DataCipher>,
+        // send_direction: DataDirection,
+        // receive_direction: DataDirection,
     ) -> Self {
+        let (session_id, send_cipher, receive_cipher, send_direction, receive_direction) =
+            config.into_parts();
         Self {
             codec: DataFrameCodec::new(io),
 
