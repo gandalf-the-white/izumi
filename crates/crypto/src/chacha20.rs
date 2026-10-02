@@ -3,43 +3,84 @@ use chacha20poly1305::{
     aead::{Aead, Payload},
 };
 
-use crate::{CryptoError, DataCipher};
+use crate::{CryptoError, DataCipher, cipher::nonce_from_sequence};
 
 pub struct ChaCha20Poly1305DataCipher {
     cipher: ChaCha20Poly1305,
-    counter: u64,
+    // counter: u64,
 }
 
 impl ChaCha20Poly1305DataCipher {
     pub fn new(key: &[u8; 32]) -> Self {
         Self {
             cipher: ChaCha20Poly1305::new(key.into()),
-
-            counter: 0,
+            // counter: 0,
         }
     }
 
-    fn next_nonce(&mut self) -> Result<[u8; 12], CryptoError> {
-        let counter = self.counter;
+    // fn next_nonce(&mut self) -> Result<[u8; 12], CryptoError> {
+    //     let counter = self.counter;
 
-        self.counter = self
-            .counter
-            .checked_add(1)
-            .ok_or(CryptoError::NonceExhausted)?;
+    //     self.counter = self
+    //         .counter
+    //         .checked_add(1)
+    //         .ok_or(CryptoError::NonceExhausted)?;
 
-        let mut nonce = [0_u8; 12];
+    //     let mut nonce = [0_u8; 12];
 
-        nonce[4..].copy_from_slice(&counter.to_be_bytes());
+    //     nonce[4..].copy_from_slice(&counter.to_be_bytes());
 
-        Ok(nonce)
-    }
+    //     Ok(nonce)
+    // }
 }
 
-impl DataCipher for ChaCha20Poly1305DataCipher {
-    fn encrypt(&mut self, plaintext: &[u8], aad: &[u8]) -> Result<Vec<u8>, CryptoError> {
-        let nonce = self.next_nonce()?;
-        let nonce = Nonce::try_from(&nonce[..]).map_err(|_| CryptoError::EncryptionFailed)?;
+// impl DataCipher for ChaCha20Poly1305DataCipher {
+//     fn encrypt(&mut self, plaintext: &[u8], aad: &[u8]) -> Result<Vec<u8>, CryptoError> {
+//         let nonce = self.next_nonce()?;
+//         let nonce = Nonce::try_from(&nonce[..]).map_err(|_| CryptoError::EncryptionFailed)?;
 
+//         self.cipher
+//             .encrypt(
+//                 &nonce,
+//                 Payload {
+//                     msg: plaintext,
+//                     aad,
+//                 },
+//             )
+//             .map_err(|_| CryptoError::EncryptionFailed)
+//     }
+
+//     fn decrypt(&mut self, ciphertext: &[u8], aad: &[u8]) -> Result<Vec<u8>, CryptoError> {
+//         let nonce = self.next_nonce()?;
+//         let nonce = Nonce::try_from(&nonce[..]).map_err(|_| CryptoError::DecryptionFailed)?;
+
+//         self.cipher
+//             .decrypt(
+//                 &nonce,
+//                 Payload {
+//                     msg: ciphertext,
+//                     aad,
+//                 },
+//             )
+//             .map_err(|_| CryptoError::DecryptionFailed)
+//     }
+// }
+
+impl DataCipher for ChaCha20Poly1305DataCipher {
+    fn encrypt(&self, sequence: u64, plaintext: &[u8], aad: &[u8]) -> Result<Vec<u8>, CryptoError> {
+        let nonce_bytes = nonce_from_sequence(sequence);
+        let nonce =
+            Nonce::try_from(nonce_bytes.as_slice()).map_err(|_| CryptoError::EncryptionFailed)?;
+
+        // self.cipher
+        //     .encrypt(
+        //         Nonce::from_slice(&nonce),
+        //         Payload {
+        //             msg: plaintext,
+        //             aad,
+        //         },
+        //     )
+        //     .map_err(|_| CryptoError::EncryptionFailed)
         self.cipher
             .encrypt(
                 &nonce,
@@ -51,10 +92,25 @@ impl DataCipher for ChaCha20Poly1305DataCipher {
             .map_err(|_| CryptoError::EncryptionFailed)
     }
 
-    fn decrypt(&mut self, ciphertext: &[u8], aad: &[u8]) -> Result<Vec<u8>, CryptoError> {
-        let nonce = self.next_nonce()?;
-        let nonce = Nonce::try_from(&nonce[..]).map_err(|_| CryptoError::DecryptionFailed)?;
+    fn decrypt(
+        &self,
+        sequence: u64,
+        ciphertext: &[u8],
+        aad: &[u8],
+    ) -> Result<Vec<u8>, CryptoError> {
+        let nonce_bytes = nonce_from_sequence(sequence);
+        let nonce =
+            Nonce::try_from(nonce_bytes.as_slice()).map_err(|_| CryptoError::DecryptionFailed)?;
 
+        // self.cipher
+        //     .decrypt(
+        //         Nonce::from_slice(&nonce),
+        //         Payload {
+        //             msg: ciphertext,
+        //             aad,
+        //         },
+        //     )
+        //     .map_err(|_| CryptoError::DecryptionFailed)
         self.cipher
             .decrypt(
                 &nonce,

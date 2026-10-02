@@ -3,119 +3,6 @@ use crypto::{
     derive_directional_keys,
 };
 
-// #[test]
-// fn chacha_encrypts_and_decrypts() {
-//     let key = [42_u8; 32];
-
-//     let mut sender = ChaCha20Poly1305DataCipher::new(&key);
-
-//     let mut receiver = ChaCha20Poly1305DataCipher::new(&key);
-
-//     let plaintext = b"hello secure proxy";
-
-//     let aad = b"session-123";
-
-//     let ciphertext = sender.encrypt(plaintext, aad).expect("encryption");
-
-//     assert_ne!(ciphertext, plaintext);
-
-//     let decrypted = receiver.decrypt(&ciphertext, aad).expect("decryption");
-
-//     assert_eq!(decrypted, plaintext);
-// }
-
-// #[test]
-// fn aes_encrypts_and_decrypts() {
-//     let key = [42_u8; 32];
-
-//     let mut sender = Aes256GcmDataCipher::new(&key);
-
-//     let mut receiver = Aes256GcmDataCipher::new(&key);
-
-//     let plaintext = b"hello secure proxy";
-
-//     let aad = b"session-123";
-
-//     let ciphertext = sender.encrypt(plaintext, aad).expect("encryption");
-
-//     assert_ne!(ciphertext, plaintext);
-
-//     let decrypted = receiver.decrypt(&ciphertext, aad).expect("decryption");
-
-//     assert_eq!(decrypted, plaintext);
-// }
-
-// #[test]
-// fn modified_ciphertext_is_rejected() {
-//     let key = [42_u8; 32];
-
-//     let mut sender = ChaCha20Poly1305DataCipher::new(&key);
-
-//     let mut receiver = ChaCha20Poly1305DataCipher::new(&key);
-
-//     let mut ciphertext = sender.encrypt(b"secret", b"session").unwrap();
-
-//     ciphertext[0] ^= 0x01;
-
-//     let result = receiver.decrypt(&ciphertext, b"session");
-
-//     assert!(matches!(result, Err(crypto::CryptoError::DecryptionFailed)));
-// }
-
-// #[test]
-// fn wrong_aad_is_rejected() {
-//     let key = [42_u8; 32];
-
-//     let mut sender = ChaCha20Poly1305DataCipher::new(&key);
-
-//     let mut receiver = ChaCha20Poly1305DataCipher::new(&key);
-
-//     let ciphertext = sender.encrypt(b"secret", b"session-A").unwrap();
-
-//     let result = receiver.decrypt(&ciphertext, b"session-B");
-
-//     assert!(result.is_err());
-// }
-
-// #[test]
-// fn x25519_produces_same_shared_secret() {
-//     let alice = EphemeralKeyExchange::generate();
-
-//     let bob = EphemeralKeyExchange::generate();
-
-//     let alice_public = alice.public_key();
-
-//     let bob_public = bob.public_key();
-
-//     let alice_secret = alice.shared_secret(bob_public);
-
-//     let bob_secret = bob.shared_secret(alice_public);
-
-//     assert_eq!(alice_secret, bob_secret);
-// }
-
-// #[test]
-// fn directional_keys_are_different() {
-//     let secret = [7_u8; 32];
-
-//     let keys = derive_directional_keys(&secret, "session-123", "chacha20poly1305").unwrap();
-
-//     assert_ne!(keys.initiator_to_responder, keys.responder_to_initiator);
-// }
-
-// #[test]
-// fn derivation_is_deterministic() {
-//     let secret = [7_u8; 32];
-
-//     let first = derive_directional_keys(&secret, "session-123", "chacha20poly1305").unwrap();
-
-//     let second = derive_directional_keys(&secret, "session-123", "chacha20poly1305").unwrap();
-
-//     assert_eq!(first.initiator_to_responder, second.initiator_to_responder);
-
-//     assert_eq!(first.responder_to_initiator, second.responder_to_initiator);
-// }
-
 // ============================================================
 // ChaCha20-Poly1305
 // ============================================================
@@ -124,22 +11,22 @@ use crypto::{
 fn chacha_encrypts_and_decrypts() {
     let key = [42_u8; 32];
 
-    let mut sender = ChaCha20Poly1305DataCipher::new(&key);
+    let sender = ChaCha20Poly1305DataCipher::new(&key);
 
-    let mut receiver = ChaCha20Poly1305DataCipher::new(&key);
+    let receiver = ChaCha20Poly1305DataCipher::new(&key);
 
     let plaintext = b"hello secure proxy";
 
     let aad = b"session-123";
 
     let ciphertext = sender
-        .encrypt(plaintext, aad)
+        .encrypt(0, plaintext, aad)
         .expect("ChaCha20 encryption should succeed");
 
     assert_ne!(ciphertext, plaintext);
 
     let decrypted = receiver
-        .decrypt(&ciphertext, aad)
+        .decrypt(0, &ciphertext, aad)
         .expect("ChaCha20 decryption should succeed");
 
     assert_eq!(decrypted, plaintext);
@@ -149,17 +36,17 @@ fn chacha_encrypts_and_decrypts() {
 fn chacha_rejects_modified_ciphertext() {
     let key = [42_u8; 32];
 
-    let mut sender = ChaCha20Poly1305DataCipher::new(&key);
+    let sender = ChaCha20Poly1305DataCipher::new(&key);
 
-    let mut receiver = ChaCha20Poly1305DataCipher::new(&key);
+    let receiver = ChaCha20Poly1305DataCipher::new(&key);
 
     let mut ciphertext = sender
-        .encrypt(b"very secret message", b"session-123")
+        .encrypt(0, b"very secret message", b"session-123")
         .expect("encryption should succeed");
 
     ciphertext[0] ^= 0x01;
 
-    let result = receiver.decrypt(&ciphertext, b"session-123");
+    let result = receiver.decrypt(0, &ciphertext, b"session-123");
 
     assert!(result.is_err(), "modified ciphertext must be rejected");
 }
@@ -168,15 +55,15 @@ fn chacha_rejects_modified_ciphertext() {
 fn chacha_rejects_wrong_aad() {
     let key = [42_u8; 32];
 
-    let mut sender = ChaCha20Poly1305DataCipher::new(&key);
+    let sender = ChaCha20Poly1305DataCipher::new(&key);
 
-    let mut receiver = ChaCha20Poly1305DataCipher::new(&key);
+    let receiver = ChaCha20Poly1305DataCipher::new(&key);
 
     let ciphertext = sender
-        .encrypt(b"secret", b"session-A")
+        .encrypt(0, b"secret", b"session-A")
         .expect("encryption should succeed");
 
-    let result = receiver.decrypt(&ciphertext, b"session-B");
+    let result = receiver.decrypt(0, &ciphertext, b"session-B");
 
     assert!(
         result.is_err(),
@@ -192,22 +79,22 @@ fn chacha_rejects_wrong_aad() {
 fn aes256gcm_encrypts_and_decrypts() {
     let key = [24_u8; 32];
 
-    let mut sender = Aes256GcmDataCipher::new(&key);
+    let sender = Aes256GcmDataCipher::new(&key);
 
-    let mut receiver = Aes256GcmDataCipher::new(&key);
+    let receiver = Aes256GcmDataCipher::new(&key);
 
     let plaintext = b"hello using AES-256-GCM";
 
     let aad = b"session-aes";
 
     let ciphertext = sender
-        .encrypt(plaintext, aad)
+        .encrypt(0, plaintext, aad)
         .expect("AES encryption should succeed");
 
     assert_ne!(ciphertext, plaintext);
 
     let decrypted = receiver
-        .decrypt(&ciphertext, aad)
+        .decrypt(0, &ciphertext, aad)
         .expect("AES decryption should succeed");
 
     assert_eq!(decrypted, plaintext);
@@ -217,19 +104,19 @@ fn aes256gcm_encrypts_and_decrypts() {
 fn aes256gcm_rejects_modified_ciphertext() {
     let key = [24_u8; 32];
 
-    let mut sender = Aes256GcmDataCipher::new(&key);
+    let sender = Aes256GcmDataCipher::new(&key);
 
-    let mut receiver = Aes256GcmDataCipher::new(&key);
+    let receiver = Aes256GcmDataCipher::new(&key);
 
     let mut ciphertext = sender
-        .encrypt(b"secret", b"session-aes")
+        .encrypt(0, b"secret", b"session-aes")
         .expect("encryption should succeed");
 
     let last = ciphertext.len() - 1;
 
     ciphertext[last] ^= 0x01;
 
-    let result = receiver.decrypt(&ciphertext, b"session-aes");
+    let result = receiver.decrypt(0, &ciphertext, b"session-aes");
 
     assert!(result.is_err(), "modified ciphertext must be rejected");
 }
@@ -238,15 +125,15 @@ fn aes256gcm_rejects_modified_ciphertext() {
 fn aes256gcm_rejects_wrong_aad() {
     let key = [24_u8; 32];
 
-    let mut sender = Aes256GcmDataCipher::new(&key);
+    let sender = Aes256GcmDataCipher::new(&key);
 
-    let mut receiver = Aes256GcmDataCipher::new(&key);
+    let receiver = Aes256GcmDataCipher::new(&key);
 
     let ciphertext = sender
-        .encrypt(b"secret", b"session-A")
+        .encrypt(0, b"secret", b"session-A")
         .expect("encryption should succeed");
 
-    let result = receiver.decrypt(&ciphertext, b"session-B");
+    let result = receiver.decrypt(0, &ciphertext, b"session-B");
 
     assert!(
         result.is_err(),
@@ -262,38 +149,42 @@ fn aes256gcm_rejects_wrong_aad() {
 fn successive_messages_use_different_ciphertexts() {
     let key = [42_u8; 32];
 
-    let mut sender = ChaCha20Poly1305DataCipher::new(&key);
+    let sender = ChaCha20Poly1305DataCipher::new(&key);
 
     let plaintext = b"same plaintext";
-
     let aad = b"session-123";
 
-    let first = sender.encrypt(plaintext, aad).expect("first encryption");
+    let first = sender.encrypt(0, plaintext, aad).expect("first encryption");
 
-    let second = sender.encrypt(plaintext, aad).expect("second encryption");
+    let second = sender
+        .encrypt(1, plaintext, aad)
+        .expect("second encryption");
 
-    assert_ne!(first, second, "two records must not reuse the same nonce");
+    assert_ne!(
+        first, second,
+        "different sequences must produce different ciphertexts"
+    );
 }
 
 #[test]
 fn multiple_chacha_records_are_decrypted_in_order() {
     let key = [42_u8; 32];
 
-    let mut sender = ChaCha20Poly1305DataCipher::new(&key);
+    let sender = ChaCha20Poly1305DataCipher::new(&key);
 
-    let mut receiver = ChaCha20Poly1305DataCipher::new(&key);
+    let receiver = ChaCha20Poly1305DataCipher::new(&key);
 
     let aad = b"session-records";
 
-    for index in 0..100 {
-        let message = format!("message-{index}");
+    for sequence in 0..100_u64 {
+        let message = format!("message-{sequence}");
 
         let ciphertext = sender
-            .encrypt(message.as_bytes(), aad)
+            .encrypt(sequence, message.as_bytes(), aad)
             .expect("encryption should succeed");
 
         let plaintext = receiver
-            .decrypt(&ciphertext, aad)
+            .decrypt(sequence, &ciphertext, aad)
             .expect("decryption should succeed");
 
         assert_eq!(plaintext, message.as_bytes());
@@ -426,4 +317,67 @@ fn different_suites_produce_different_keys() {
     assert_ne!(aes.initiator_to_responder, chacha.initiator_to_responder);
 
     assert_ne!(aes.responder_to_initiator, chacha.responder_to_initiator);
+}
+
+#[test]
+fn same_key_sequence_plaintext_and_aad_produce_same_ciphertext() {
+    let key = [42_u8; 32];
+
+    let cipher = ChaCha20Poly1305DataCipher::new(&key);
+
+    let first = cipher.encrypt(42, b"hello", b"aad").unwrap();
+
+    let second = cipher.encrypt(42, b"hello", b"aad").unwrap();
+
+    assert_eq!(first, second);
+}
+
+#[test]
+fn different_sequences_produce_different_ciphertexts() {
+    let key = [42_u8; 32];
+
+    let cipher = ChaCha20Poly1305DataCipher::new(&key);
+
+    let plaintext = b"same plaintext";
+
+    let aad = b"session-123";
+
+    let first = cipher.encrypt(0, plaintext, aad).unwrap();
+
+    let second = cipher.encrypt(1, plaintext, aad).unwrap();
+
+    assert_ne!(first, second);
+}
+
+#[test]
+fn chacha_rejects_wrong_sequence() {
+    let key = [42_u8; 32];
+
+    let sender = ChaCha20Poly1305DataCipher::new(&key);
+
+    let receiver = ChaCha20Poly1305DataCipher::new(&key);
+
+    let ciphertext = sender.encrypt(42, b"secret", b"session").unwrap();
+
+    let result = receiver.decrypt(43, &ciphertext, b"session");
+
+    assert!(
+        result.is_err(),
+        "ciphertext encrypted for sequence 42 must not decrypt with sequence 43"
+    );
+}
+
+#[test]
+fn aes256gcm_rejects_wrong_sequence() {
+    let key = [24_u8; 32];
+
+    let sender = Aes256GcmDataCipher::new(&key);
+
+    let receiver = Aes256GcmDataCipher::new(&key);
+
+    let ciphertext = sender.encrypt(10, b"secret", b"session").unwrap();
+
+    let result = receiver.decrypt(11, &ciphertext, b"session");
+
+    assert!(result.is_err());
 }

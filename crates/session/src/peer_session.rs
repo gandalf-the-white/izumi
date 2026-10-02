@@ -49,6 +49,9 @@ pub struct PeerSession {
     receive_cipher: Option<Box<dyn DataCipher>>,
 
     remote_data_public_key: Option<[u8; 32]>,
+
+    send_sequence: u64,
+    receive_sequence: u64,
 }
 
 impl PeerSession {
@@ -87,6 +90,9 @@ impl PeerSession {
             receive_cipher: None,
 
             remote_data_public_key: None,
+
+            send_sequence: 0,
+            receive_sequence: 0,
         }
     }
 
@@ -556,12 +562,6 @@ impl PeerSession {
         }
     }
 
-    // fn refresh_data_key_phase(&mut self) {
-    //     if self.key_exchange.is_some() && self.remote_data_public_key.is_some() {
-    //         self.phase = SessionPhase::DataKeysEstablished;
-    //     }
-    // }
-
     fn refresh_data_key_phase(&mut self) {
         if self.phase == SessionPhase::Negotiated
             && self.key_exchange.is_some()
@@ -616,28 +616,72 @@ impl PeerSession {
         Ok(())
     }
 
+    // pub fn encrypt_data(&mut self, plaintext: &[u8]) -> Result<Vec<u8>, SessionError> {
+    //     self.ensure_phase(SessionPhase::ReadyForData)?;
+
+    //     let aad = self.session_id.as_str().as_bytes();
+
+    //     self.send_cipher
+    //         .as_mut()
+    //         .ok_or(SessionError::DataKeysUnavailable)?
+    //         .encrypt(plaintext, aad)
+    //         .map_err(|error| SessionError::DataCrypto(error.to_string()))
+    // }
+
     pub fn encrypt_data(&mut self, plaintext: &[u8]) -> Result<Vec<u8>, SessionError> {
         self.ensure_phase(SessionPhase::ReadyForData)?;
 
+        let sequence = self.send_sequence;
+
         let aad = self.session_id.as_str().as_bytes();
 
-        self.send_cipher
-            .as_mut()
+        let ciphertext = self
+            .send_cipher
+            .as_ref()
             .ok_or(SessionError::DataKeysUnavailable)?
-            .encrypt(plaintext, aad)
-            .map_err(|error| SessionError::DataCrypto(error.to_string()))
+            .encrypt(sequence, plaintext, aad)
+            .map_err(|error| SessionError::DataCrypto(error.to_string()))?;
+
+        self.send_sequence = self
+            .send_sequence
+            .checked_add(1)
+            .ok_or_else(|| SessionError::DataCrypto("send sequence exhausted".to_owned()))?;
+
+        Ok(ciphertext)
     }
+
+    // pub fn decrypt_data(&mut self, ciphertext: &[u8]) -> Result<Vec<u8>, SessionError> {
+    //     self.ensure_phase(SessionPhase::ReadyForData)?;
+
+    //     let aad = self.session_id.as_str().as_bytes();
+
+    //     self.receive_cipher
+    //         .as_mut()
+    //         .ok_or(SessionError::DataKeysUnavailable)?
+    //         .decrypt(ciphertext, aad)
+    //         .map_err(|error| SessionError::DataCrypto(error.to_string()))
+    // }
 
     pub fn decrypt_data(&mut self, ciphertext: &[u8]) -> Result<Vec<u8>, SessionError> {
         self.ensure_phase(SessionPhase::ReadyForData)?;
 
+        let sequence = self.receive_sequence;
+
         let aad = self.session_id.as_str().as_bytes();
 
-        self.receive_cipher
-            .as_mut()
+        let plaintext = self
+            .receive_cipher
+            .as_ref()
             .ok_or(SessionError::DataKeysUnavailable)?
-            .decrypt(ciphertext, aad)
-            .map_err(|error| SessionError::DataCrypto(error.to_string()))
+            .decrypt(sequence, ciphertext, aad)
+            .map_err(|error| SessionError::DataCrypto(error.to_string()))?;
+
+        self.receive_sequence = self
+            .receive_sequence
+            .checked_add(1)
+            .ok_or_else(|| SessionError::DataCrypto("receive sequence exhausted".to_owned()))?;
+
+        Ok(plaintext)
     }
 }
 

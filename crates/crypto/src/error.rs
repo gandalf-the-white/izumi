@@ -8,9 +8,8 @@ pub enum CryptoError {
     #[error("decryption failed")]
     DecryptionFailed,
 
-    #[error("nonce space exhausted")]
-    NonceExhausted,
-
+    // #[error("nonce space exhausted")]
+    // NonceExhausted,
     #[error("invalid key length")]
     InvalidKeyLength,
 
